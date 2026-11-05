@@ -36,15 +36,9 @@ const LotesIndex = (props: any) => {
 
   const { data, setData, post, processing, errors, reset } = useForm({
     emitente_id: "",
-    ambiente: "",
+    ambiente: "homologacao",
     arquivo: null as File | null,
   });
-
-  // The picker starts on the emitente's own environment.
-  const escolherEmitente = (id: string) => {
-    const emitente = emitentes.find((e) => String(e.id) === id);
-    setData((atual) => ({ ...atual, emitente_id: id, ambiente: emitente?.ambiente ?? "" }));
-  };
 
   useEffect(() => {
     if (flash?.success) toast.success(flash.success, { autoClose: 3000 });
@@ -60,7 +54,7 @@ const LotesIndex = (props: any) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    post(route("lotes.store"), { forceFormData: true, onSuccess: () => reset() });
+    post(route("lotes.store"), { forceFormData: true, onSuccess: () => reset("arquivo") });
   };
 
   return (
@@ -81,7 +75,10 @@ const LotesIndex = (props: any) => {
           <Can permission="lotes-emissao.create">
             <Card>
               <Card.Header>
-                <h5 className="card-title mb-0">Novo lote</h5>
+                <h5 className="card-title mb-0">
+                  Novo lote
+                  {!permiteAmbiente && <span className="text-muted fs-14 fw-normal"> · Ambiente: Homologação (teste, sem valor fiscal)</span>}
+                </h5>
               </Card.Header>
               <Card.Body>
                 <Form onSubmit={handleSubmit}>
@@ -90,7 +87,7 @@ const LotesIndex = (props: any) => {
                       <Form.Label>Emitente</Form.Label>
                       <Form.Select
                         value={data.emitente_id}
-                        onChange={(e) => escolherEmitente(e.target.value)}
+                        onChange={(e) => setData("emitente_id", e.target.value)}
                         isInvalid={!!errors.emitente_id}
                       >
                         <option value="">Selecione o emitente</option>
@@ -105,7 +102,7 @@ const LotesIndex = (props: any) => {
                     {permiteAmbiente && (
                       <Col md={2}>
                         <AmbienteField
-                          value={data.ambiente || "homologacao"}
+                          value={data.ambiente}
                           onChange={(valor) => setData("ambiente", valor)}
                           error={errors.ambiente}
                         />

@@ -27,6 +27,10 @@ export const AmbienteField = ({ value, onChange, error }: Props) => (
       ))}
     </Form.Select>
     <Form.Control.Feedback type="invalid">{error}</Form.Control.Feedback>
-    {value === "producao" && <Form.Text className="text-danger">Em produção a nota tem valor fiscal.</Form.Text>}
+    {value === "producao" ? (
+      <div className="text-danger fs-14 mt-1">Produção: a nota tem valor fiscal.</div>
+    ) : (
+      <div className="text-muted fs-14 mt-1">Homologação: teste, sem valor fiscal.</div>
+    )}
   </>
 );

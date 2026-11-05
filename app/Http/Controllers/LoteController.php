@@ -47,16 +47,16 @@ class LoteController extends Controller
     }
 
     /**
-     * Environment the lote is issued in. The choice only counts while the Administrador
-     * has the option switched on; otherwise the emitente's own environment is used.
+     * Environment the lote is issued in. Only while the Administrador has the option
+     * switched on can the user choose; switched off, everything is homologação.
      */
-    private function ambienteDoLote(Request $request, Emitente $emitente): string
+    private function ambienteDoLote(Request $request): string
     {
         if (! Setting::bool(Setting::ESCOLHER_AMBIENTE)) {
-            return $emitente->ambiente;
+            return 'homologacao';
         }
 
-        return $request->input('ambiente') ?: $emitente->ambiente;
+        return $request->input('ambiente') ?: 'homologacao';
     }
 
     public function store(Request $request, LoteImporter $importer)
@@ -79,7 +79,7 @@ class LoteController extends Controller
         }
 
         $arquivo = $request->file('arquivo');
-        $lote = $importer->importar($emitente, $request->user(), (string) file_get_contents($arquivo->getRealPath()), $arquivo->getClientOriginalName(), $this->ambienteDoLote($request, $emitente));
+        $lote = $importer->importar($emitente, $request->user(), (string) file_get_contents($arquivo->getRealPath()), $arquivo->getClientOriginalName(), $this->ambienteDoLote($request));
 
         ProcessarLoteJob::dispatch($lote);
 
@@ -165,7 +165,7 @@ class LoteController extends Controller
             return back()->withErrors(['nota' => $erros])->withInput();
         }
 
-        $lote = $importer->importarLinha($emitente, $request->user(), $linha, ambiente: $this->ambienteDoLote($request, $emitente));
+        $lote = $importer->importarLinha($emitente, $request->user(), $linha, ambiente: $this->ambienteDoLote($request));
 
         ProcessarLoteJob::dispatchSync($lote);
 

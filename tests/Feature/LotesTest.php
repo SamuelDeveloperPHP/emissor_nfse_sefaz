@@ -265,7 +265,8 @@ class LotesTest extends TestCase
 
     public function test_environment_choice_is_ignored_until_the_administrador_turns_it_on(): void
     {
-        $emitente = $this->emitente(); // homologacao
+        $emitente = $this->emitente();
+        $emitente->update(['ambiente' => 'producao']); // even a "producao" emitente issues in homologação while off
         $admin = User::where('email', 'admin@example.com')->first();
 
         // Off by default: the picker is hidden and a forged value does not count.
@@ -299,7 +300,7 @@ class LotesTest extends TestCase
         ]);
         $this->assertSame('producao', Lote::latest('id')->first()->ambiente);
 
-        // Left empty it falls back to the emitente's environment; garbage is refused.
+        // Left empty it falls back to homologação; garbage is refused.
         $this->post(route('lotes.emitir.store'), $this->notaIndividual($emitente));
         $this->assertSame('homologacao', Lote::latest('id')->first()->ambiente);
         $this->post(route('lotes.emitir.store'), $this->notaIndividual($emitente, ['ambiente' => 'outro']))->assertSessionHasErrors('ambiente');

@@ -21,7 +21,7 @@ const Emitir = (props: any) => {
 
   const { data, setData, post, processing, errors } = useForm({
     emitente_id: "",
-    ambiente: "",
+    ambiente: "homologacao",
     tomador_documento: "",
     tomador_nome: "",
     tomador_email: "",
@@ -52,6 +52,11 @@ const Emitir = (props: any) => {
           <Card>
             <Card.Body>
               <Form onSubmit={handleSubmit}>
+                {!permiteAmbiente && (
+                  <Alert variant="info" className="fs-14">
+                    Ambiente: <strong>Homologação</strong> (teste, sem valor fiscal).
+                  </Alert>
+                )}
                 {errosDaNota.length > 0 && (
                   <Alert variant="danger">
                     <ul className="mb-0 ps-3">
@@ -67,10 +72,7 @@ const Emitir = (props: any) => {
                     <Form.Label>Emitente</Form.Label>
                     <Form.Select
                       value={data.emitente_id}
-                      onChange={(e) => {
-                        const escolhido = emitentes.find((item) => String(item.id) === e.target.value);
-                        setData((atual) => ({ ...atual, emitente_id: e.target.value, ambiente: escolhido?.ambiente ?? "" }));
-                      }}
+                      onChange={(e) => setData("emitente_id", e.target.value)}
                       isInvalid={!!errors.emitente_id}
                     >
                       <option value="">Selecione o emitente</option>
@@ -90,7 +92,7 @@ const Emitir = (props: any) => {
                   {permiteAmbiente && (
                     <Col md={4}>
                       <AmbienteField
-                        value={data.ambiente || "homologacao"}
+                        value={data.ambiente}
                         onChange={(valor) => setData("ambiente", valor)}
                         error={errors.ambiente}
                       />
