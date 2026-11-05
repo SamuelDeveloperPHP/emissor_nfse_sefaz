@@ -25,10 +25,14 @@ class RolesAndPermissionsSeeder extends Seeder
         // the permissions too keeps the permission-matrix screen showing it as fully checked.
         $admin->syncPermissions(Permission::all());
 
-        $adminUser = User::firstOrCreate(
-            ['email' => 'admin@example.com'],
-            ['name' => 'Administrador', 'password' => Hash::make('password'), 'all_emitentes' => true]
-        );
-        $adminUser->syncRoles([$admin->name]);
+        // Never ship a known default login to production: create the first admin
+        // there with `php artisan usuarios:criar-admin`.
+        if (! app()->isProduction()) {
+            $adminUser = User::firstOrCreate(
+                ['email' => 'admin@example.com'],
+                ['name' => 'Administrador', 'password' => Hash::make('password'), 'all_emitentes' => true]
+            );
+            $adminUser->syncRoles([$admin->name]);
+        }
     }
 }

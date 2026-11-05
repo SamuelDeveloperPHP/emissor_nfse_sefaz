@@ -27,6 +27,7 @@
     "@fullcalendar/list": "^6.1.15",
     "@fullcalendar/multimonth": "^6.1.15",
     "@fullcalendar/react": "^6.1.15",
+    "@hello-pangea/dnd": "^18.0.1",
     "@inertiajs/inertia": "^0.11.1",
     "@react-google-maps/api": "^2.20.3",
     "@reduxjs/toolkit": "^2.3.0",
