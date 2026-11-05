@@ -69,7 +69,6 @@ A NFS-e é do padrão **federal** (SEFIN Nacional / ADN). O ISSQN continua sendo
 - Validar a transmissão em produção restrita (endpoints, corpo da requisição, resposta, algoritmo da assinatura).
 - Confirmar em produção restrita a consulta (`/dps/{id}`), o cancelamento por evento e o DANFSE, que seguem o contrato público e não foram testados no ADN real.
 - Substituição de NFS-e (evento 105102).
-- Grupo IBS/CBS.
 - Grupo IBS/CBS: o sistema envia o que for informado (indicador de operação, CST e classificação tributária), mas não conhece as tabelas oficiais de códigos nem as regras de quando é obrigatório; o ADN decide. Preencher no cadastro de serviços ou no CSV.
 - E-mail ao tomador depende de SMTP configurado no `.env`; com `MAIL_MAILER=log` nada é enviado.
 
