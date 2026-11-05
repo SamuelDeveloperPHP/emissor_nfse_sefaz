@@ -1,12 +1,13 @@
-import React, { useEffect } from "react";
-import { Button, Card, Col, Container, Form, Row, Table } from "react-bootstrap";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Alert, Button, Card, Col, Container, Form, Row, Table } from "react-bootstrap";
 import { Head, Link, router, useForm, usePage } from "@inertiajs/react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Layout from "../../../Layouts";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import { Can } from "../../../common/usePermission";
-import { LoteBadge, NotaStatus, PorStatus } from "./status";
+import { LoteBadge, NotaStatus, PorStatus, moeda } from "./status";
 import { AmbienteField, nomeDoAmbiente } from "./AmbienteField";
 
 interface LoteRow {
@@ -51,6 +52,46 @@ const LotesIndex = (props: any) => {
     const timer = setInterval(() => router.reload({ only: ["lotes"] }), 3000);
     return () => clearInterval(timer);
   }, [temProcessando]);
+
+  type Previa = {
+    total: number;
+    validas: number;
+    invalidas: number;
+    valor_total: number;
+    problemas: { linha: number; tomador: string | null; valor: number | null; erros: string[] }[];
+    truncado: boolean;
+  };
+  const [previa, setPrevia] = useState<Previa | null>(null);
+  const [erroPrevia, setErroPrevia] = useState<string | null>(null);
+  const [conferindo, setConferindo] = useState(false);
+
+  // Dry run: tells what the file would produce before anything is created.
+  const conferir = async () => {
+    if (!data.arquivo || !data.emitente_id) return;
+    setConferindo(true);
+    setErroPrevia(null);
+    setPrevia(null);
+
+    const form = new FormData();
+    form.append("emitente_id", data.emitente_id);
+    form.append("arquivo", data.arquivo);
+
+    try {
+      const resposta = await axios.post(route("lotes.previa"), form);
+      setPrevia(resposta.data);
+    } catch (erro: any) {
+      const mensagens = erro?.response?.data?.errors;
+      setErroPrevia(mensagens ? (Object.values(mensagens).flat() as string[]).join(" ") : "Não foi possível conferir o arquivo.");
+    } finally {
+      setConferindo(false);
+    }
+  };
+
+  // A different file or emitente invalidates the last check.
+  useEffect(() => {
+    setPrevia(null);
+    setErroPrevia(null);
+  }, [data.arquivo, data.emitente_id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,12 +162,63 @@ const LotesIndex = (props: any) => {
                         Uma nota por linha. <a href={route("lotes.modelo")}>Baixar modelo</a>
                       </Form.Text>
                     </Col>
-                    <Col md={2} className="d-flex align-items-end" style={{ minHeight: 62 }}>
+                    <Col md={2} className="d-flex align-items-end gap-2" style={{ minHeight: 62 }}>
+                      <Button type="button" variant="outline-primary" onClick={conferir} disabled={conferindo || !data.emitente_id || !data.arquivo}>
+                        {conferindo ? "Conferindo..." : "Conferir"}
+                      </Button>
                       <Button type="submit" variant="primary" disabled={processing || !data.emitente_id || !data.arquivo}>
-                        {processing ? "Enviando..." : "Enviar lote"}
+                        {processing ? "Enviando..." : "Enviar"}
                       </Button>
                     </Col>
                   </Row>
+
+                  {erroPrevia && (
+                    <Alert variant="danger" className="mt-3 mb-0">
+                      {erroPrevia}
+                    </Alert>
+                  )}
+
+                  {previa && (
+                    <div className="mt-3">
+                      <Alert variant={previa.invalidas === 0 ? "success" : "warning"}>
+                        <strong>{previa.validas}</strong> de {previa.total} {previa.total === 1 ? "linha está" : "linhas estão"} pronta{previa.validas === 1 ? "" : "s"} para emitir
+                        {previa.validas > 0 && <> (total de {moeda(previa.valor_total)})</>}.
+                        {previa.invalidas > 0 && (
+                          <>
+                            {" "}
+                            <strong>{previa.invalidas}</strong> {previa.invalidas === 1 ? "linha tem problema e será rejeitada" : "linhas têm problema e serão rejeitadas"}; corrija o arquivo e confira de novo, ou envie assim mesmo.
+                          </>
+                        )}
+                      </Alert>
+                      {previa.problemas.length > 0 && (
+                        <Table size="sm" responsive>
+                          <thead>
+                            <tr>
+                              <th>Linha</th>
+                              <th>Tomador</th>
+                              <th>O que corrigir</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {previa.problemas.map((problema) => (
+                              <tr key={problema.linha}>
+                                <td>{problema.linha}</td>
+                                <td>{problema.tomador ?? "—"}</td>
+                                <td>
+                                  <ul className="mb-0 ps-3">
+                                    {problema.erros.map((erro, indice) => (
+                                      <li key={indice}>{erro}</li>
+                                    ))}
+                                  </ul>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </Table>
+                      )}
+                      {previa.truncado && <p className="text-muted small mb-0">Mostrando as primeiras {previa.problemas.length} linhas com problema.</p>}
+                    </div>
+                  )}
                 </Form>
               </Card.Body>
             </Card>

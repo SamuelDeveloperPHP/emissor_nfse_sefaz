@@ -47,6 +47,104 @@ class LoteImporter
      */
     public function importar(Emitente $emitente, ?User $user, string $conteudo, string $nomeArquivo, ?string $ambiente = null): Lote
     {
+        return $this->criarLote($emitente, $user, $this->lerValidado($conteudo), $nomeArquivo, $ambiente);
+    }
+
+    /**
+     * Dry run of importar(): reports what would be accepted and what not, without creating anything.
+     * Every problem line is listed (up to $limite); of the good ones only a short sample.
+     *
+     * @return array{total: int, validas: int, invalidas: int, valor_total: float, problemas: array<int, array>, amostra: array<int, array>, truncado: bool}
+     */
+    public function previa(string $conteudo, int $limite = 500): array
+    {
+        $linhas = $this->lerValidado($conteudo);
+
+        $validas = 0;
+        $valorTotal = 0.0;
+        $problemas = [];
+        $amostra = [];
+        $totalProblemas = 0;
+
+        foreach ($linhas as $numero => $linha) {
+            [$payload, $erros] = $this->normalizar($linha);
+            $item = ['linha' => $numero, 'tomador' => $payload['tomador_nome'] ?: null, 'valor' => $payload['valor'], 'erros' => $erros];
+
+            if ($erros) {
+                $totalProblemas++;
+                if (count($problemas) < $limite) {
+                    $problemas[] = $item;
+                }
+
+                continue;
+            }
+
+            $validas++;
+            $valorTotal += (float) $payload['valor'];
+            if (count($amostra) < 10) {
+                $amostra[] = $item;
+            }
+        }
+
+        return [
+            'total' => count($linhas),
+            'validas' => $validas,
+            'invalidas' => $totalProblemas,
+            'valor_total' => round($valorTotal, 2),
+            'problemas' => $problemas,
+            'amostra' => $amostra,
+            'truncado' => $totalProblemas > count($problemas),
+        ];
+    }
+
+    /**
+     * Rows of a lote's rejected notas laid out as an import file, so the user can fix them and send again.
+     * The extra "motivo" column is ignored by the importer.
+     */
+    public function csvDasRejeitadas(Lote $lote): string
+    {
+        $saida = fopen('php://temp', 'r+');
+        fwrite($saida, "\xEF\xBB\xBF");
+        fputcsv($saida, [...self::COLUNAS, 'motivo'], ';');
+
+        $lote->notas()->where('status', NotaFiscal::STATUS_REJEITADA)->orderBy('linha')->each(function (NotaFiscal $nota) use ($saida) {
+            $p = $nota->payload ?? [];
+            $decimal = fn ($v) => $v === null || $v === '' ? '' : number_format((float) $v, 2, ',', '');
+
+            // A cell starting with = or @ would run as a formula when the file is opened in a spreadsheet.
+            $seguro = fn ($v) => is_string($v) && preg_match('/^[=@\t\r]/', $v) ? "'".$v : $v;
+
+            fputcsv($saida, array_map($seguro, [
+                $p['tomador_documento'] ?? '',
+                $p['tomador_nome'] ?? '',
+                $p['tomador_email'] ?? '',
+                $p['descricao'] ?? '',
+                $p['codigo_tributacao'] ?? '',
+                $decimal($p['valor'] ?? null),
+                $decimal($p['aliquota'] ?? null),
+                ! empty($p['iss_retido']) ? '1' : '0',
+                $p['competencia'] ?? '',
+                $p['municipio_prestacao'] ?? '',
+                $p['tomador_cep'] ?? '',
+                $p['tomador_logradouro'] ?? '',
+                $p['tomador_numero'] ?? '',
+                $p['tomador_complemento'] ?? '',
+                $p['tomador_bairro'] ?? '',
+                $p['tomador_codigo_municipio'] ?? '',
+                implode(' | ', $nota->erros ?? [$nota->motivo_rejeicao]),
+            ]), ';');
+        });
+
+        rewind($saida);
+        $csv = stream_get_contents($saida);
+        fclose($saida);
+
+        return $csv;
+    }
+
+    /** @return array<int, array<string, string>> */
+    private function lerValidado(string $conteudo): array
+    {
         $linhas = $this->ler($conteudo);
 
         if (count($linhas) === 0) {
@@ -58,7 +156,7 @@ class LoteImporter
             ]);
         }
 
-        return $this->criarLote($emitente, $user, $linhas, $nomeArquivo, $ambiente);
+        return $linhas;
     }
 
     /**

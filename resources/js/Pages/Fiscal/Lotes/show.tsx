@@ -56,7 +56,12 @@ const LoteShow = (props: any) => {
                 <span className="text-muted">
                   {lote.total} {lote.total === 1 ? "nota" : "notas"} · {lote.emitente} · {nomeDoAmbiente(lote.ambiente)} · enviado em {lote.created_at}
                 </span>
-                <Link href={route("lotes.index")} className="ms-auto">
+                {lote.por_status.rejeitada > 0 && (
+                  <a className="btn btn-outline-primary btn-sm ms-auto" href={route("lotes.rejeitadas", lote.id)}>
+                    Baixar linhas rejeitadas (CSV)
+                  </a>
+                )}
+                <Link href={route("lotes.index")} className={lote.por_status.rejeitada > 0 ? "" : "ms-auto"}>
                   Voltar aos lotes
                 </Link>
               </div>

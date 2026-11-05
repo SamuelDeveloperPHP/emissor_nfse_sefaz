@@ -88,6 +88,33 @@ class LoteController extends Controller
         return redirect()->route('lotes.show', $lote)->with('success', 'Lote enviado para processamento.');
     }
 
+    /** Dry run of an upload: JSON with what would be accepted and the problems per line. */
+    public function previa(Request $request, LoteImporter $importer)
+    {
+        $request->validate([
+            'emitente_id' => ['required', 'integer', 'exists:emitentes,id'],
+            'arquivo' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ], [
+            'arquivo.mimes' => 'Envie um arquivo CSV.',
+            'arquivo.max' => 'O arquivo pode ter no máximo 5 MB.',
+        ]);
+
+        abort_unless($request->user()->canAccessEmitente(Emitente::findOrFail($request->input('emitente_id'))), 403);
+
+        return response()->json($importer->previa((string) file_get_contents($request->file('arquivo')->getRealPath())));
+    }
+
+    public function rejeitadas(Request $request, Lote $lote, LoteImporter $importer)
+    {
+        abort_unless($request->user()->canAccessEmitente($lote->emitente), 403);
+
+        return response()->streamDownload(
+            fn () => print($importer->csvDasRejeitadas($lote)),
+            'rejeitadas-lote-'.$lote->id.'.csv',
+            ['Content-Type' => 'text/csv; charset=UTF-8']
+        );
+    }
+
     public function show(Request $request, Lote $lote)
     {
         abort_unless($request->user()->canAccessEmitente($lote->emitente), 403);
