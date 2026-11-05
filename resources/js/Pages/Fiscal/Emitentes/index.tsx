@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Button, Card, Col, Container, Form, Modal, Row, Table } from "react-bootstrap";
-import { Head, router, useForm, usePage } from "@inertiajs/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Head, Link, router, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
+import { avisarCamposInvalidos, confirmarExclusao, useFlashAlert } from "../../../common/alerta";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
-import DeleteModal from "../../../Components/Common/DeleteModal";
 import { Can } from "../../../common/usePermission";
 
 interface EmitenteRow {
@@ -54,9 +52,6 @@ const emptyForm = {
   regime_tributario: "",
   ambiente: "homologacao",
   driver: "adn_nacional",
-  certificado: null as File | null,
-  certificado_password: "",
-  certificado_validade: "",
   rps_serie: "",
   rps_numero_atual: 0,
   is_active: true,
@@ -67,18 +62,12 @@ const formatCnpj = (cnpj: string) =>
 
 const EmitentesIndex = (props: any) => {
   const emitentes = props.emitentes as EmitenteRow[];
-  const { flash }: any = usePage().props;
 
   const [showModal, setShowModal] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  const [toDelete, setToDelete] = useState<EmitenteRow | null>(null);
 
   const { data, setData, post, put, processing, errors, reset, transform } = useForm(emptyForm);
 
-  useEffect(() => {
-    if (flash?.success) toast.success(flash.success, { autoClose: 3000 });
-    if (flash?.error) toast.error(flash.error, { autoClose: 3000 });
-  }, [flash]);
+  useFlashAlert();
 
   const openCreate = () => {
     reset();
@@ -105,9 +94,6 @@ const EmitentesIndex = (props: any) => {
       regime_tributario: emitente.regime_tributario ?? "",
       ambiente: emitente.ambiente,
       driver: emitente.driver,
-      certificado: null,
-      certificado_password: "",
-      certificado_validade: emitente.certificado_validade ? emitente.certificado_validade.slice(0, 10) : "",
       rps_serie: emitente.rps_serie ?? "",
       rps_numero_atual: emitente.rps_numero_atual,
       is_active: emitente.is_active,
@@ -118,7 +104,7 @@ const EmitentesIndex = (props: any) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const options = { forceFormData: true, onSuccess: () => setShowModal(false) };
+    const options = { onSuccess: () => setShowModal(false), onError: avisarCamposInvalidos, preserveScroll: true };
 
     if (data.id) {
       put(route("emitentes.update", data.id), options);
@@ -127,16 +113,9 @@ const EmitentesIndex = (props: any) => {
     }
   };
 
-  const confirmDelete = (emitente: EmitenteRow) => {
-    setToDelete(emitente);
-    setShowDelete(true);
-  };
-
-  const handleDelete = () => {
-    if (toDelete) {
-      router.delete(route("emitentes.destroy", toDelete.id));
-    }
-    setShowDelete(false);
+  const confirmDelete = async (emitente: EmitenteRow) => {
+    const ok = await confirmarExclusao("Excluir emitente?", `${emitente.razao_social} será removido, com o certificado digital guardado. Não é possível excluir quem já tem notas.`);
+    if (ok) router.delete(route("emitentes.destroy", emitente.id), { preserveScroll: true });
   };
 
   return (
@@ -350,33 +329,10 @@ const EmitentesIndex = (props: any) => {
                 />
               </Col>
 
-              <Col md={4}>
-                <Form.Label>Certificado digital (A1, .pfx/.p12)</Form.Label>
-                <Form.Control
-                  type="file"
-                  accept=".pfx,.p12"
-                  onChange={(e) => setData("certificado", (e.target as HTMLInputElement).files?.[0] ?? null)}
-                  isInvalid={!!errors.certificado}
-                />
-                <Form.Control.Feedback type="invalid">{errors.certificado}</Form.Control.Feedback>
-                {data.id && <Form.Text>Envie um arquivo apenas para substituir o certificado atual.</Form.Text>}
-              </Col>
-              <Col md={4}>
-                <Form.Label>Senha do certificado</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={data.certificado_password}
-                  onChange={(e) => setData("certificado_password", e.target.value)}
-                  placeholder={data.id ? "Deixe em branco para manter" : ""}
-                />
-              </Col>
-              <Col md={4}>
-                <Form.Label>Validade do certificado</Form.Label>
-                <Form.Control
-                  type="date"
-                  value={data.certificado_validade ?? ""}
-                  onChange={(e) => setData("certificado_validade", e.target.value)}
-                />
+              <Col md={12}>
+                <div className="text-muted small">
+                  O certificado digital A1 deste emitente é enviado em <Link href={route("configuracoes.index")}>Administração &gt; Configurações</Link>.
+                </div>
               </Col>
 
               <Col md={12}>
@@ -400,9 +356,6 @@ const EmitentesIndex = (props: any) => {
         </Form>
       </Modal>
 
-      <DeleteModal show={showDelete} onCloseClick={() => setShowDelete(false)} onDeleteClick={handleDelete} />
-
-      <ToastContainer />
     </Layout>
   );
 };

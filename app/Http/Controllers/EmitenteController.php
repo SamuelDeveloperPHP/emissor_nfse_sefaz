@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Emitente;
+use App\Services\Nfse\CofreDeCertificados;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -30,11 +30,12 @@ class EmitenteController extends Controller
         $this->authorize('create', Emitente::class);
 
         $data = $this->validated($request);
-        $data = $this->handleCertificado($request, $data);
 
-        Emitente::create($data);
-
-        return back()->with('success', 'Emitente cadastrado com sucesso.');
+        return $this->executar(
+            fn () => Emitente::create($data),
+            'Emitente cadastrado com sucesso.',
+            'Não foi possível cadastrar o emitente. Tente novamente.'
+        );
     }
 
     public function update(Request $request, Emitente $emitente)
@@ -42,33 +43,34 @@ class EmitenteController extends Controller
         $this->authorize('update', $emitente);
 
         $data = $this->validated($request, $emitente);
-        $data = $this->handleCertificado($request, $data, $emitente);
 
-        $emitente->update($data);
-
-        return back()->with('success', 'Emitente atualizado com sucesso.');
+        return $this->executar(
+            fn () => $emitente->update($data),
+            'Emitente atualizado com sucesso.',
+            'Não foi possível atualizar o emitente. Tente novamente.',
+            ['emitente_id' => $emitente->id]
+        );
     }
 
-    public function destroy(Emitente $emitente)
+    public function destroy(Emitente $emitente, CofreDeCertificados $cofre)
     {
         $this->authorize('delete', $emitente);
 
-        if ($emitente->certificado_path) {
-            Storage::disk('local')->delete($emitente->certificado_path);
-        }
-
-        $emitente->delete();
-
-        return back()->with('success', 'Emitente excluído com sucesso.');
+        return $this->executar(function () use ($emitente, $cofre) {
+            $caminho = $emitente->certificado_path;
+            $emitente->delete();
+            $cofre->apagar($caminho);
+        }, 'Emitente excluído com sucesso.', 'Não foi possível excluir o emitente. Ele pode ter notas e lotes vinculados.', ['emitente_id' => $emitente->id]);
     }
 
+    /** The A1 certificate is not part of this form: it is sent in Administração > Configurações. */
     private function validated(Request $request, ?Emitente $emitente = null): array
     {
         // Normalize before validating so a punctuated CNPJ is checked for uniqueness
         // against the same digits-only format it's stored in.
         $request->merge(['cnpj' => preg_replace('/\D/', '', (string) $request->input('cnpj'))]);
 
-        $data = $request->validate([
+        return $request->validate([
             'razao_social' => ['required', 'string', 'max:200'],
             'nome_fantasia' => ['nullable', 'string', 'max:200'],
             'cnpj' => ['required', 'digits:14', Rule::unique('emitentes', 'cnpj')->ignore($emitente)],
@@ -87,33 +89,9 @@ class EmitenteController extends Controller
             'ambiente' => ['required', Rule::in(['homologacao', 'producao'])],
             'driver' => ['required', Rule::in(['adn_nacional', 'prefeitura_legada', 'gateway', 'simulador'])],
             'driver_config' => ['nullable', 'array'],
-            'certificado' => ['nullable', 'file', 'max:4096', 'mimes:pfx,p12'],
-            'certificado_password' => ['nullable', 'string'],
-            'certificado_validade' => ['nullable', 'date'],
             'rps_serie' => ['nullable', 'string', 'max:10'],
             'rps_numero_atual' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['required', 'boolean'],
         ]);
-
-        return $data;
-    }
-
-    private function handleCertificado(Request $request, array $data, ?Emitente $emitente = null): array
-    {
-        if ($request->hasFile('certificado')) {
-            if ($emitente?->certificado_path) {
-                Storage::disk('local')->delete($emitente->certificado_path);
-            }
-
-            $data['certificado_path'] = $request->file('certificado')->store('certificados');
-        }
-
-        unset($data['certificado']);
-
-        if (blank($data['certificado_password'] ?? null)) {
-            unset($data['certificado_password']);
-        }
-
-        return $data;
     }
 }

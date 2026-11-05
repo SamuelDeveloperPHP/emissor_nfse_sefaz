@@ -19,3 +19,7 @@ yarn-error.log
 /.idea
 /.vscode
 /deploy/dist
+
+# Deploy keys and temporary files must never be committed
+/deploy/emissor_hostinger_deploy*
+/deploy/*.tmp.txt

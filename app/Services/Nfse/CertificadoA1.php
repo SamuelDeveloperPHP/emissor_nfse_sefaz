@@ -4,7 +4,6 @@ namespace App\Services\Nfse;
 
 use App\Models\Emitente;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * An opened A1 certificate (.pfx / .p12): leaf certificate, private key and chain in PEM.
@@ -22,14 +21,14 @@ final class CertificadoA1
 
     public static function doEmitente(Emitente $emitente): self
     {
-        if (blank($emitente->certificado_path) || ! Storage::disk('local')->exists($emitente->certificado_path)) {
-            throw new NfseException('O emitente não tem certificado digital A1 cadastrado.');
+        if (blank($emitente->certificado_path)) {
+            throw new NfseException('O emitente não tem certificado digital A1 cadastrado. Envie o certificado em Administração > Configurações.');
         }
         if (blank($emitente->certificado_password)) {
-            throw new NfseException('Informe a senha do certificado digital no cadastro do emitente.');
+            throw new NfseException('A senha do certificado digital não está cadastrada. Envie o certificado de novo em Administração > Configurações.');
         }
 
-        return self::dePfx(Storage::disk('local')->get($emitente->certificado_path), (string) $emitente->certificado_password);
+        return self::dePfx(app(CofreDeCertificados::class)->ler($emitente->certificado_path), (string) $emitente->certificado_password);
     }
 
     public static function dePfx(string $pfx, string $senha): self
@@ -47,10 +46,40 @@ final class CertificadoA1
         $validoAte = CarbonImmutable::createFromTimestamp((int) ($info['validTo_time_t'] ?? 0));
 
         if ($validoAte->isPast()) {
-            throw new NfseException('O certificado digital venceu em '.$validoAte->format('d/m/Y').'. Cadastre um certificado válido no emitente.');
+            throw new NfseException('O certificado digital venceu em '.$validoAte->format('d/m/Y').'. Envie um certificado válido em Administração > Configurações.');
         }
 
         return new self($itens['cert'], $itens['pkey'], implode("\n", $itens['extracerts'] ?? []), $validoAte);
+    }
+
+    /** Common name of the certificate holder (for ICP-Brasil: "RAZAO SOCIAL:CNPJ"). */
+    public function titular(): string
+    {
+        $cn = openssl_x509_parse($this->certPem)['subject']['CN'] ?? '';
+
+        return is_array($cn) ? (string) ($cn[0] ?? '') : (string) $cn;
+    }
+
+    /**
+     * CNPJ the certificate was issued to, or null when it cannot be read (e-CPF, unusual layout).
+     * ICP-Brasil puts it in the otherName 2.16.76.1.3.3 and, by convention, after a colon in the CN.
+     */
+    public function cnpj(): ?string
+    {
+        if (preg_match('/:(\d{14})\s*$/', $this->titular(), $m)) {
+            return $m[1];
+        }
+
+        $der = base64_decode($this->certificadoBase64(), true) ?: '';
+
+        // OID 2.16.76.1.3.3 is 60 4C 01 03 03 in DER; the value follows within a few bytes.
+        return preg_match('/\x60\x4C\x01\x03\x03.{0,8}?(\d{14})/s', $der, $m) ? $m[1] : null;
+    }
+
+    /** SHA-256 fingerprint, hex: identifies the certificate without revealing anything secret. */
+    public function impressao(): string
+    {
+        return (string) openssl_x509_fingerprint($this->certPem, 'sha256');
     }
 
     /** Leaf certificate as base64 DER, the form XMLDSig's X509Certificate element carries. */
