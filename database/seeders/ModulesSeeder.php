@@ -72,9 +72,18 @@ class ModulesSeeder extends Seeder
             'icon' => 'bx bx-upload',
             'route' => 'lotes.index',
             'parent_id' => $fiscal->id,
+            'order' => 13,
+            'is_active' => true,
+            'actions' => ['cancelar'],
+        ]);
+
+        Module::updateOrCreate(['key' => 'nfse-avulsa'], [
+            'name' => 'NFS-e Avulsa',
+            'icon' => 'bx bx-file-blank',
+            'route' => 'lotes.emitir',
+            'parent_id' => $fiscal->id,
             'order' => 12,
             'is_active' => true,
-            'actions' => ['emitir', 'cancelar'],
         ]);
 
         Module::updateOrCreate(['key' => 'notas-fiscais'], [
