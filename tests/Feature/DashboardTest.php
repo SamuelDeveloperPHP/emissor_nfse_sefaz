@@ -86,6 +86,37 @@ class DashboardTest extends TestCase
         $this->assertCount(30, $props['periodos']['mes']['labels']);
     }
 
+    public function test_pending_and_rejected_notes_without_emission_date_count_by_creation_date(): void
+    {
+        $a = $this->emitente('Ativa', '11111111000111');
+
+        // The batch job leaves emitida_em empty for anything that was not authorized.
+        NotaFiscal::create(['emitente_id' => $a->id, 'status' => 'rejeitada', 'valor_servicos' => 10]);
+        NotaFiscal::create(['emitente_id' => $a->id, 'status' => 'pendente', 'valor_servicos' => 10]);
+        $this->nota($a, 'autorizada', '2026-11-05 10:00:00');
+
+        $props = $this->props($this->actingAs(User::where('email', 'admin@example.com')->first())->get(route('dashboard')));
+
+        $dia = $props['periodos']['dia'];
+        $this->assertSame(3, $dia['total']);
+        $this->assertSame(1, $dia['por_status']['rejeitada']);
+        $this->assertSame(1, $dia['por_status']['pendente']);
+        $this->assertSame(50.0, (float) $dia['taxa_rejeicao']);
+        $this->assertSame(1, $dia['serie']['rejeitada'][15]);
+        $this->assertSame(3, $props['periodos']['ano']['total']);
+    }
+
+    public function test_no_route_uses_a_closure_so_route_cache_works(): void
+    {
+        $closures = collect(app('router')->getRoutes()->getRoutes())
+            ->filter(fn ($route) => $route->getAction('uses') instanceof \Closure)
+            ->map(fn ($route) => $route->uri())
+            ->values()
+            ->all();
+
+        $this->assertSame([], $closures);
+    }
+
     public function test_user_only_sees_figures_for_linked_emitentes(): void
     {
         $linked = $this->emitente('Vinculada', '11111111000111');

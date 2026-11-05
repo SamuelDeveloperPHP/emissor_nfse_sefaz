@@ -1,10 +1,23 @@
-import React, { useState } from "react";
-import { Head, Link } from "@inertiajs/react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
+import { Head, Link, router } from "@inertiajs/react";
 import { Card, Col, Container, Row } from "react-bootstrap";
 
 import Layout from "../../Layouts";
-import { EmitentesDonut, NotasChart, STATUS_META, StatusDonut, Status } from "./Charts";
+import { STATUS_META, Status } from "./status";
 import "./dashboard.css";
+
+// Chart.js is heavy and only this page uses it, so it loads on demand.
+const NotasChart = lazy(() => import("./Charts").then((m) => ({ default: m.NotasChart })));
+const StatusDonut = lazy(() => import("./Charts").then((m) => ({ default: m.StatusDonut })));
+const EmitentesDonut = lazy(() => import("./Charts").then((m) => ({ default: m.EmitentesDonut })));
+
+const CarregandoGrafico = () => (
+  <div className="fiscal-empty" role="status">
+    <span>Carregando gráfico...</span>
+  </div>
+);
+
+const REFRESH_MS = 60_000;
 
 type PeriodoKey = "dia" | "semana" | "mes" | "ano";
 
@@ -72,6 +85,17 @@ export default function Dashboard({ emitentes, periodos, gerado_em }: Props) {
   const periodo = periodos[selecionado];
   const agrupamento = PERIODOS.find((p) => p.key === selecionado)!.agrupamento;
 
+  // Keeps the numbers current while the page stays open, without polling a hidden tab.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        router.reload({ only: ["emitentes", "periodos", "gerado_em"] });
+      }
+    }, REFRESH_MS);
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <React.Fragment>
       <Head title="Painel fiscal" />
@@ -133,7 +157,9 @@ export default function Dashboard({ emitentes, periodos, gerado_em }: Props) {
                     aria-label={`Notas fiscais ${agrupamento}, ${periodo.rotulo.toLowerCase()}: ${inteiro(periodo.total)} no total`}
                   >
                     {periodo.total > 0 ? (
-                      <NotasChart labels={periodo.labels} serie={periodo.serie} />
+                      <Suspense fallback={<CarregandoGrafico />}>
+                        <NotasChart labels={periodo.labels} serie={periodo.serie} />
+                      </Suspense>
                     ) : (
                       <SemDados
                         titulo="Nenhuma nota neste período"
@@ -153,7 +179,9 @@ export default function Dashboard({ emitentes, periodos, gerado_em }: Props) {
                 <Card.Body>
                   <div className="fiscal-chart" role="img" aria-label="Distribuição das notas por situação">
                     {periodo.total > 0 ? (
-                      <StatusDonut porStatus={periodo.por_status} />
+                      <Suspense fallback={<CarregandoGrafico />}>
+                        <StatusDonut porStatus={periodo.por_status} />
+                      </Suspense>
                     ) : (
                       <SemDados titulo="Sem notas para classificar" texto="Escolha outro período ou aguarde a primeira emissão." />
                     )}
@@ -173,7 +201,9 @@ export default function Dashboard({ emitentes, periodos, gerado_em }: Props) {
                 <Card.Body>
                   <div className="fiscal-chart fiscal-chart--short" role="img" aria-label={`${emitentes.ativos} emitentes ativos e ${emitentes.inativos} inativos`}>
                     {emitentes.total > 0 ? (
-                      <EmitentesDonut ativos={emitentes.ativos} inativos={emitentes.inativos} />
+                      <Suspense fallback={<CarregandoGrafico />}>
+                        <EmitentesDonut ativos={emitentes.ativos} inativos={emitentes.inativos} />
+                      </Suspense>
                     ) : (
                       <SemDados titulo="Nenhum emitente disponível" texto="Cadastre uma empresa em Fiscal > Emitentes para começar." />
                     )}

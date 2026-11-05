@@ -11,6 +11,13 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    /**
+     * Date a nota counts on: when it was authorized, or when it entered the system.
+     * Pending and rejected notes have no emitida_em, so without the fallback they
+     * would never show up (and the rejection rate would always read 0%).
+     */
+    private const DATA_DA_NOTA = 'COALESCE(emitida_em, created_at)';
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -70,9 +77,8 @@ class DashboardController extends Controller
      */
     private function notasPorDia($query, Carbon $now): array
     {
-        return $query
-            ->whereBetween('emitida_em', [$now->copy()->startOfYear(), $now->copy()->endOfYear()])
-            ->selectRaw('DATE(emitida_em) as bucket, status, COUNT(*) as total, COALESCE(SUM(valor_servicos), 0) as valor')
+        return $this->noPeriodo($query, $now->copy()->startOfYear(), $now->copy()->endOfYear())
+            ->selectRaw('DATE('.self::DATA_DA_NOTA.') as bucket, status, COUNT(*) as total, COALESCE(SUM(valor_servicos), 0) as valor')
             ->groupBy('bucket', 'status')
             ->get()
             ->map(fn ($row) => ['key' => (string) $row->bucket, 'status' => $row->status, 'n' => (int) $row->total, 'v' => (float) $row->valor])
@@ -84,19 +90,31 @@ class DashboardController extends Controller
      */
     private function notasPorHora($query, Carbon $now): array
     {
+        $data = self::DATA_DA_NOTA;
         $hora = match (DB::connection()->getDriverName()) {
-            'sqlite' => "CAST(strftime('%H', emitida_em) AS INTEGER)",
-            'pgsql' => 'EXTRACT(HOUR FROM emitida_em)',
-            default => 'HOUR(emitida_em)',
+            'sqlite' => "CAST(strftime('%H', {$data}) AS INTEGER)",
+            'pgsql' => "EXTRACT(HOUR FROM {$data})",
+            default => "HOUR({$data})",
         };
 
-        return $query
-            ->whereBetween('emitida_em', [$now->copy()->startOfDay(), $now->copy()->endOfDay()])
+        return $this->noPeriodo($query, $now->copy()->startOfDay(), $now->copy()->endOfDay())
             ->selectRaw("{$hora} as bucket, status, COUNT(*) as total, COALESCE(SUM(valor_servicos), 0) as valor")
             ->groupBy('bucket', 'status')
             ->get()
             ->map(fn ($row) => ['key' => (int) $row->bucket, 'status' => $row->status, 'n' => (int) $row->total, 'v' => (float) $row->valor])
             ->all();
+    }
+
+    /**
+     * Written as two indexable ranges instead of WHERE COALESCE(...) BETWEEN, which
+     * would scan the whole table.
+     */
+    private function noPeriodo($query, Carbon $inicio, Carbon $fim)
+    {
+        return $query->where(function ($q) use ($inicio, $fim) {
+            $q->whereBetween('emitida_em', [$inicio, $fim])
+                ->orWhere(fn ($w) => $w->whereNull('emitida_em')->whereBetween('created_at', [$inicio, $fim]));
+        });
     }
 
     private function filtrarDias(array $dias, Carbon $inicio, Carbon $fim): array
