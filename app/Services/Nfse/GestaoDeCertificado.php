@@ -3,7 +3,10 @@
 namespace App\Services\Nfse;
 
 use App\Models\Emitente;
+use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -101,5 +104,89 @@ class GestaoDeCertificado
     public function testar(Emitente $emitente): CertificadoA1
     {
         return CertificadoA1::doEmitente($emitente);
+    }
+
+    // ---- the office's own certificate ("Certificado do sistema") ------------------------------------
+    // Kept with the same protections as an emitente's. It is NOT used to sign or transmit notas: those
+    // always use the emitente's own A1.
+
+    /**
+     * What the screen may show about the system certificate (never the file, path or password).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function dadosDoSistema(): ?array
+    {
+        return Setting::json(Setting::CERTIFICADO_SISTEMA);
+    }
+
+    /**
+     * @return array{avisos: array<int, string>, titular: string, valido_ate: string}
+     *
+     * @throws NfseException
+     */
+    public function enviarDoSistema(string $pfx, string $senha, User $por): array
+    {
+        if ($pfx === '' || strlen($pfx) > self::TAMANHO_MAXIMO) {
+            throw new NfseException('O arquivo do certificado está vazio ou grande demais para ser um certificado A1.');
+        }
+
+        $certificado = CertificadoA1::dePfx($pfx, $senha);
+        $avisos = $certificado->cnpj() === null ? ['Não foi possível ler o CNPJ dentro do certificado; confirme que é o e-CNPJ do escritório.'] : [];
+
+        $novo = $this->cofre->guardar($pfx, 0);
+        $antigo = $this->dadosDoSistema()['path'] ?? null;
+
+        try {
+            Setting::putJson(Setting::CERTIFICADO_SISTEMA, [
+                'path' => $novo,
+                'senha' => Crypt::encryptString($senha),
+                'validade' => $certificado->validoAte->toDateString(),
+                'titular' => mb_substr($certificado->titular(), 0, 255),
+                'cnpj' => $certificado->cnpj(),
+                'impressao' => $certificado->impressao(),
+                'enviado_em' => now()->toDateTimeString(),
+                'enviado_por' => $por->id,
+                'enviado_por_nome' => $por->name,
+            ]);
+        } catch (Throwable $e) {
+            $this->cofre->apagar($novo);
+
+            throw $e;
+        }
+
+        $this->cofre->apagar($antigo);
+
+        Log::info('Certificado do sistema enviado.', ['user_id' => $por->id, 'impressao' => $certificado->impressao(), 'valido_ate' => $certificado->validoAte->toDateString()]);
+
+        return ['avisos' => $avisos, 'titular' => $certificado->titular(), 'valido_ate' => $certificado->validoAte->toDateString()];
+    }
+
+    public function removerDoSistema(User $por): void
+    {
+        $caminho = $this->dadosDoSistema()['path'] ?? null;
+
+        Setting::forget(Setting::CERTIFICADO_SISTEMA);
+        $this->cofre->apagar($caminho);
+
+        Log::info('Certificado do sistema removido.', ['user_id' => $por->id]);
+    }
+
+    /** @throws NfseException */
+    public function testarDoSistema(): CertificadoA1
+    {
+        $dados = $this->dadosDoSistema();
+
+        if ($dados === null) {
+            throw new NfseException('O sistema não tem certificado cadastrado.');
+        }
+
+        try {
+            $senha = Crypt::decryptString($dados['senha']);
+        } catch (DecryptException) {
+            throw new NfseException('Não foi possível ler a senha guardada (a chave de segurança do sistema mudou?). Envie o certificado de novo.');
+        }
+
+        return CertificadoA1::dePfx($this->cofre->ler($dados['path']), $senha);
     }
 }

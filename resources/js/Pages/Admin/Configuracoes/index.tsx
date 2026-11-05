@@ -21,6 +21,24 @@ interface CertificadoRow {
   impressao: string | null;
 }
 
+interface CertificadoSistema {
+  validade: string;
+  dias: number;
+  titular: string | null;
+  cnpj_certificado: string | null;
+  enviado_em: string | null;
+  enviado_por: string | null;
+  impressao: string | null;
+}
+
+/** Where the open "send certificate" dialog will post, and how to describe it. */
+interface AlvoEnvio {
+  nome: string;
+  detalhe: string;
+  url: string;
+  substituindo: boolean;
+}
+
 const formatarCnpj = (cnpj: string) => cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 
 const SituacaoCertificado = ({ c }: { c: CertificadoRow }) => {
@@ -33,12 +51,13 @@ const SituacaoCertificado = ({ c }: { c: CertificadoRow }) => {
 
 const Configuracoes = (props: any) => {
   const certificados = props.certificados as CertificadoRow[];
+  const sistema = (props.certificado_sistema ?? null) as CertificadoSistema | null;
   const salvo = !!props.escolher_ambiente;
 
   useFlashAlert();
 
   const ambiente = useForm({ escolher_ambiente: salvo });
-  const [alvo, setAlvo] = useState<CertificadoRow | null>(null);
+  const [alvo, setAlvo] = useState<AlvoEnvio | null>(null);
   const envio = useForm<{ certificado: File | null; certificado_senha: string }>({ certificado: null, certificado_senha: "" });
 
   const salvarAmbiente = (e: React.FormEvent) => {
@@ -46,10 +65,23 @@ const Configuracoes = (props: any) => {
     ambiente.post(route("configuracoes.update"), { preserveScroll: true, onError: avisarCamposInvalidos });
   };
 
-  const abrirEnvio = (c: CertificadoRow) => {
+  const abrir = (destino: AlvoEnvio) => {
     envio.reset();
     envio.clearErrors();
-    setAlvo(c);
+    setAlvo(destino);
+  };
+
+  const abrirEnvio = (c: CertificadoRow) =>
+    abrir({ nome: c.razao_social, detalhe: `CNPJ ${formatarCnpj(c.cnpj)}`, url: route("certificados.store", c.id), substituindo: c.tem_certificado });
+
+  const abrirEnvioSistema = () =>
+    abrir({ nome: "Certificado do sistema (escritório)", detalhe: "Guardado para uso do escritório; não assina as notas dos emitentes.", url: route("certificados.sistema.store"), substituindo: !!sistema });
+
+  const testarSistema = () => router.post(route("certificados.sistema.testar"), {}, { preserveScroll: true });
+
+  const removerSistema = async () => {
+    const ok = await confirmarExclusao("Remover o certificado do sistema?", "O arquivo e a senha guardados são apagados. As notas dos emitentes não são afetadas.");
+    if (ok) router.delete(route("certificados.sistema.destroy"), { preserveScroll: true });
   };
 
   const fecharEnvio = () => {
@@ -60,7 +92,7 @@ const Configuracoes = (props: any) => {
   const enviar = (e: React.FormEvent) => {
     e.preventDefault();
     if (!alvo) return;
-    envio.post(route("certificados.store", alvo.id), {
+    envio.post(alvo.url, {
       forceFormData: true,
       preserveScroll: true,
       onSuccess: fecharEnvio,
@@ -161,6 +193,68 @@ const Configuracoes = (props: any) => {
               </Card>
             </Tab>
 
+            <Tab eventKey="sistema" title="Certificado do sistema">
+              <Card>
+                <Card.Header>
+                  <h4 className="card-title mb-0">Certificado A1 do escritório</h4>
+                </Card.Header>
+                <Card.Body>
+                  <Alert variant="info" className="fs-14">
+                    Aqui fica o e-CNPJ A1 do próprio escritório, com as mesmas proteções dos certificados dos emitentes (arquivo e senha criptografados, nada volta para a tela ou para os logs).
+                    <br />
+                    <strong>Por enquanto ele só é guardado e conferido.</strong> As notas continuam sendo assinadas e transmitidas com o certificado de cada emitente.
+                  </Alert>
+
+                  {sistema ? (
+                    <>
+                      <div className="mb-3">
+                        {sistema.dias < 0 ? (
+                          <Badge bg="danger">Vencido em {sistema.validade}</Badge>
+                        ) : sistema.dias <= 30 ? (
+                          <Badge bg="warning" text="dark">Vence em {sistema.dias} {sistema.dias === 1 ? "dia" : "dias"} ({sistema.validade})</Badge>
+                        ) : (
+                          <Badge bg="success">Válido até {sistema.validade}</Badge>
+                        )}
+                      </div>
+                      <p className="mb-1">
+                        <span className="text-muted">Titular:</span> {sistema.titular ?? "—"}
+                      </p>
+                      {sistema.cnpj_certificado && (
+                        <p className="mb-1">
+                          <span className="text-muted">CNPJ:</span> {formatarCnpj(sistema.cnpj_certificado)}
+                        </p>
+                      )}
+                      <p className="mb-1">
+                        <span className="text-muted">Enviado:</span> {sistema.enviado_em ?? "—"}
+                        {sistema.enviado_por ? ` por ${sistema.enviado_por}` : ""}
+                      </p>
+                      {sistema.impressao && (
+                        <p className="mb-3">
+                          <span className="text-muted">Impressão:</span> {sistema.impressao}
+                        </p>
+                      )}
+                      <Button variant="light" className="me-2" onClick={abrirEnvioSistema}>
+                        Substituir
+                      </Button>
+                      <Button variant="light" className="me-2" onClick={testarSistema}>
+                        Testar
+                      </Button>
+                      <Button variant="outline-danger" onClick={removerSistema}>
+                        Remover
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-muted">Nenhum certificado do sistema cadastrado.</p>
+                      <Button variant="primary" onClick={abrirEnvioSistema}>
+                        Enviar certificado
+                      </Button>
+                    </>
+                  )}
+                </Card.Body>
+              </Card>
+            </Tab>
+
             <Tab eventKey="ambiente" title="Ambiente de emissão">
               <Card>
                 <Card.Header>
@@ -215,13 +309,13 @@ const Configuracoes = (props: any) => {
       <Modal show={!!alvo} onHide={fecharEnvio} centered>
         <Form onSubmit={enviar} autoComplete="off">
           <Modal.Header closeButton>
-            <Modal.Title>{alvo?.tem_certificado ? "Substituir certificado" : "Enviar certificado"}</Modal.Title>
+            <Modal.Title>{alvo?.substituindo ? "Substituir certificado" : "Enviar certificado"}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <p className="text-muted">
-              Emitente: <strong>{alvo?.razao_social}</strong>
+              <strong>{alvo?.nome}</strong>
               <br />
-              CNPJ {alvo ? formatarCnpj(alvo.cnpj) : ""}
+              {alvo?.detalhe}
             </p>
             <Form.Label>Arquivo do certificado (.pfx ou .p12)</Form.Label>
             <Form.Control
@@ -241,7 +335,7 @@ const Configuracoes = (props: any) => {
               isInvalid={!!envio.errors.certificado_senha}
             />
             <Form.Control.Feedback type="invalid">{envio.errors.certificado_senha}</Form.Control.Feedback>
-            {alvo?.tem_certificado && <Form.Text className="d-block mt-2">O certificado atual só é trocado se o novo passar nas verificações.</Form.Text>}
+            {alvo?.substituindo && <Form.Text className="d-block mt-2">O certificado atual só é trocado se o novo passar nas verificações.</Form.Text>}
           </Modal.Body>
           <Modal.Footer>
             <Button variant="light" onClick={fecharEnvio}>

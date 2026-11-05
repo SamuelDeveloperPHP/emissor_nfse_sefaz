@@ -21,15 +21,7 @@ class CertificadoController extends Controller
     {
         $this->autorizar($request, $emitente);
 
-        $request->validate([
-            'certificado' => ['required', 'file', 'max:256', 'extensions:pfx,p12'],
-            'certificado_senha' => ['required', 'string', 'max:200'],
-        ], [
-            'certificado.required' => 'Escolha o arquivo do certificado (.pfx ou .p12).',
-            'certificado.extensions' => 'O certificado precisa ser um arquivo .pfx ou .p12.',
-            'certificado.max' => 'O arquivo é grande demais para ser um certificado A1.',
-            'certificado_senha.required' => 'Informe a senha do certificado.',
-        ]);
+        $request->validate($this->regrasDoArquivo(), $this->mensagensDoArquivo());
 
         try {
             $resultado = $certificados->enviar(
@@ -80,6 +72,81 @@ class CertificadoController extends Controller
         }
 
         return back()->with('success', 'Certificado em ordem: abre com a senha cadastrada e vale até '.$certificado->validoAte->format('d/m/Y').'.');
+    }
+
+    // ---- the office's own certificate -----------------------------------------------------------
+
+    public function storeSistema(Request $request, GestaoDeCertificado $certificados)
+    {
+        $request->validate($this->regrasDoArquivo(), $this->mensagensDoArquivo());
+
+        try {
+            $resultado = $certificados->enviarDoSistema(
+                (string) file_get_contents($request->file('certificado')->getRealPath()),
+                (string) $request->input('certificado_senha'),
+                $request->user()
+            );
+        } catch (NfseException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (Throwable $e) {
+            Log::error('Falha ao guardar o certificado do sistema.', ['user_id' => $request->user()->id, 'exception' => $e]);
+
+            return back()->with('error', 'Não foi possível guardar o certificado. Tente novamente.');
+        }
+
+        $validade = date('d/m/Y', strtotime($resultado['valido_ate']));
+
+        return $resultado['avisos']
+            ? back()->with('warning', 'Certificado do sistema guardado (válido até '.$validade.'), mas atenção: '.implode(' ', $resultado['avisos']))
+            : back()->with('success', 'Certificado do sistema guardado. Válido até '.$validade.'.');
+    }
+
+    public function destroySistema(Request $request, GestaoDeCertificado $certificados)
+    {
+        try {
+            $certificados->removerDoSistema($request->user());
+        } catch (Throwable $e) {
+            Log::error('Falha ao remover o certificado do sistema.', ['user_id' => $request->user()->id, 'exception' => $e]);
+
+            return back()->with('error', 'Não foi possível remover o certificado. Tente novamente.');
+        }
+
+        return back()->with('success', 'Certificado do sistema removido.');
+    }
+
+    public function testarSistema(GestaoDeCertificado $certificados)
+    {
+        try {
+            $certificado = $certificados->testarDoSistema();
+        } catch (NfseException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (Throwable $e) {
+            Log::error('Falha ao testar o certificado do sistema.', ['exception' => $e]);
+
+            return back()->with('error', 'Não foi possível testar o certificado agora. Tente novamente.');
+        }
+
+        return back()->with('success', 'Certificado em ordem: abre com a senha cadastrada e vale até '.$certificado->validoAte->format('d/m/Y').'.');
+    }
+
+    /** @return array<string, array<int, string>> */
+    private function regrasDoArquivo(): array
+    {
+        return [
+            'certificado' => ['required', 'file', 'max:256', 'extensions:pfx,p12'],
+            'certificado_senha' => ['required', 'string', 'max:200'],
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function mensagensDoArquivo(): array
+    {
+        return [
+            'certificado.required' => 'Escolha o arquivo do certificado (.pfx ou .p12).',
+            'certificado.extensions' => 'O certificado precisa ser um arquivo .pfx ou .p12.',
+            'certificado.max' => 'O arquivo é grande demais para ser um certificado A1.',
+            'certificado_senha.required' => 'Informe a senha do certificado.',
+        ];
     }
 
     private function autorizar(Request $request, Emitente $emitente): void

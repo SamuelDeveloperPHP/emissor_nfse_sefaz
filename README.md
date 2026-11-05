@@ -7,6 +7,7 @@ Sistema para escritórios de contabilidade emitirem notas fiscais de serviço (N
 ## O que o sistema faz
 
 - **Emitentes:** cadastro de CNPJs com regime tributário, município (código IBGE) e driver de transmissão por emitente.
+- **Certificado do sistema:** aba em Configurações para guardar o e-CNPJ A1 do escritório, com as mesmas proteções; por enquanto só é guardado e conferido, as notas usam o A1 de cada emitente.
 - **Certificados digitais (A1):** o Administrador envia o .pfx e a senha de cada emitente em Administração > Configurações. O sistema abre o certificado na hora e só guarda se a senha estiver certa, se estiver na validade e se for do mesmo CNPJ (matriz e filial valem). O arquivo e a senha ficam criptografados com a `APP_KEY`; não voltam para a tela, para os logs nem para downloads; cada envio e remoção é registrado com usuário e data. **Faça backup da `APP_KEY`**: sem ela os certificados guardados não abrem e precisam ser enviados de novo.
 - **Notas fiscais:** lista com filtros (emitente, situação, período, tomador/número/chave), detalhe, download do XML da NFS-e e da DPS, DANFSE em PDF, consulta de notas pendentes (também automática a cada 5 minutos, com botão "Consultar agora") cancelamento por evento assinado e **substituição** (emite a nota corrigida com o grupo `subst` da DPS; a anterior só sai de circulação quando a nova é autorizada).
 - **IBS e CBS (reforma tributária):** grupo opcional da DPS, preenchido por serviço, no CSV (colunas `ibscbs_*`) ou na emissão avulsa; só vai na nota com os três códigos.

@@ -6,6 +6,7 @@ use App\Models\Emitente;
 use App\Models\User;
 use App\Services\Nfse\CertificadoA1;
 use App\Services\Nfse\CofreDeCertificados;
+use App\Services\Nfse\GestaoDeCertificado;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -210,6 +211,53 @@ class CertificadosTest extends TestCase
                 && isset($contexto['emitente_id'], $contexto['user_id'], $contexto['impressao'])
                 && ! str_contains(json_encode($contexto), self::SENHA);
         });
+    }
+
+    public function test_the_system_certificate_is_checked_stored_protected_and_removable(): void
+    {
+        $gestao = app(GestaoDeCertificado::class);
+        $pfx = $this->gerarPfx(self::SENHA, 365, 'ESCRITORIO CONTABIL LTDA:99888777000100');
+
+        $this->post(route('certificados.sistema.store'), ['certificado' => $this->arquivo($pfx), 'certificado_senha' => 'errada'])->assertSessionHas('error');
+        $this->assertNull($gestao->dadosDoSistema());
+
+        // Any e-CNPJ is fine here: it does not have to match an emitente.
+        $this->post(route('certificados.sistema.store'), ['certificado' => $this->arquivo($pfx), 'certificado_senha' => self::SENHA])->assertSessionHas('success');
+
+        $dados = $gestao->dadosDoSistema();
+        $this->assertSame('99888777000100', $dados['cnpj']);
+        $this->assertStringNotContainsString(self::SENHA, json_encode($dados), 'the password is stored encrypted');
+        $this->assertStringNotContainsString($pfx, Storage::disk('local')->get($dados['path']));
+
+        $pagina = $this->get(route('configuracoes.index'));
+        $pagina->assertInertia(fn (AssertableInertia $p) => $p
+            ->where('certificado_sistema.cnpj_certificado', '99888777000100')
+            ->missing('certificado_sistema.path')
+            ->missing('certificado_sistema.senha'));
+        $this->assertStringNotContainsString(self::SENHA, $pagina->getContent());
+        $this->assertStringNotContainsString('.pfx.enc', $pagina->getContent());
+
+        $this->post(route('certificados.sistema.testar'))->assertSessionHas('success');
+
+        // Replacing drops the old file; removing clears everything.
+        $this->post(route('certificados.sistema.store'), ['certificado' => $this->arquivo($this->gerarPfx('outra')), 'certificado_senha' => 'outra']);
+        Storage::disk('local')->assertMissing($dados['path']);
+
+        $this->delete(route('certificados.sistema.destroy'))->assertSessionHas('success');
+        $this->assertNull($gestao->dadosDoSistema());
+        $this->assertSame([], Storage::disk('local')->allFiles('certificados'));
+        $this->post(route('certificados.sistema.testar'))->assertSessionHas('error');
+    }
+
+    public function test_the_system_certificate_is_administrador_only(): void
+    {
+        $operador = User::factory()->create(['all_emitentes' => true]);
+        $operador->syncRoles(['Operador']);
+        $this->actingAs($operador);
+
+        $this->post(route('certificados.sistema.store'), ['certificado' => $this->arquivo($this->gerarPfx(self::SENHA)), 'certificado_senha' => self::SENHA])->assertForbidden();
+        $this->post(route('certificados.sistema.testar'))->assertForbidden();
+        $this->delete(route('certificados.sistema.destroy'))->assertForbidden();
     }
 
     public function test_the_protect_command_encrypts_plain_files_from_older_versions(): void

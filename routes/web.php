@@ -92,6 +92,10 @@ Route::middleware('auth')->group(function () {
     Route::post('configuracoes', [SettingController::class, 'update'])->middleware('role:Administrador')->name('configuracoes.update');
     // A1 certificates: throttled because the upload checks a password.
     Route::middleware(['role:Administrador', 'throttle:20,1'])->prefix('configuracoes/certificados')->name('certificados.')->group(function () {
+        // Declared before the {emitente} routes so "sistema" is never taken for an id.
+        Route::post('sistema', [CertificadoController::class, 'storeSistema'])->name('sistema.store');
+        Route::post('sistema/testar', [CertificadoController::class, 'testarSistema'])->name('sistema.testar');
+        Route::delete('sistema', [CertificadoController::class, 'destroySistema'])->name('sistema.destroy');
         Route::post('{emitente}', [CertificadoController::class, 'store'])->name('store');
         Route::post('{emitente}/testar', [CertificadoController::class, 'testar'])->name('testar');
         Route::delete('{emitente}', [CertificadoController::class, 'destroy'])->name('destroy');
