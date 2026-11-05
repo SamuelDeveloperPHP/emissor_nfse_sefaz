@@ -2,7 +2,7 @@
 
 Sistema para escritórios de contabilidade emitirem notas fiscais de serviço (NFS-e Nacional) de forma avulsa ou em lote, com controle de acesso por papel e por CNPJ.
 
-> **Estado atual:** a geração e a validação da DPS contra o esquema oficial funcionam. A **assinatura com certificado A1 e a transmissão real ao ADN ainda não existem**: hoje só o driver *Simulador local* autoriza notas, e ele não emite nada de verdade. Mantenha os emitentes em **Homologação**.
+> **Estado atual:** a geração da DPS, a validação contra o esquema oficial, a **assinatura XMLDSig com o certificado A1** e o driver de transmissão ao ADN (SEFIN Nacional, mTLS) estão implementados e testados com respostas simuladas. **Nada disso foi validado contra o ADN de verdade**: o contrato da API (corpo, campos da resposta, algoritmo SHA-1 ou SHA-256) precisa ser confirmado em *produção restrita* com um certificado real antes do uso fiscal. Hoje o driver *Simulador local* continua não emitindo nada. Mantenha os emitentes em **Homologação**.
 
 ## O que o sistema faz
 
@@ -59,10 +59,11 @@ A NFS-e é do padrão **federal** (SEFIN Nacional / ADN). O ISSQN continua sendo
 
 ### Falta fazer
 
-- Assinatura XMLDSig com o certificado A1.
-- Transmissão real ao ADN, usando os endpoints dos manuais oficiais.
+- Validar a transmissão em produção restrita (endpoints, corpo da requisição, resposta, algoritmo da assinatura).
+- Consulta automática das notas pendentes (timeout ou 5xx do ADN deixam a nota pendente, sem reenviar).
+- Tela de Notas Fiscais com download de XML/PDF (DANFSE), cancelamento e substituição.
 - Grupo IBS/CBS.
-- Telas de Notas Fiscais e Monitoramento.
+- Cadastros de tomadores e serviços, notas recorrentes, e-mail ao tomador e exportação do fechamento.
 
 ## Colocar em produção (hospedagem compartilhada)
 

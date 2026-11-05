@@ -7,7 +7,12 @@ use App\Models\NotaFiscal;
 
 class NaoImplementadoDriver implements Transmissor
 {
-    public function transmitir(Emitente $emitente, NotaFiscal $nota): array
+    public function exigeAssinatura(): bool
+    {
+        return false;
+    }
+
+    public function transmitir(Emitente $emitente, NotaFiscal $nota, string $dpsXml): array
     {
         return [
             'status' => NotaFiscal::STATUS_PENDENTE,

@@ -129,7 +129,8 @@ class LotesTest extends TestCase
 
     public function test_driver_without_transmission_leaves_valid_notes_pending(): void
     {
-        $emitente = $this->emitente('11222333000181', 'adn_nacional');
+        // adn_nacional transmits now (see AdnTransmissaoTest); the legacy driver is still a stub.
+        $emitente = $this->emitente('11222333000181', 'prefeitura_legada');
 
         $this->actingAs(User::where('email', 'admin@example.com')->first())->post(route('lotes.store'), [
             'emitente_id' => $emitente->id,

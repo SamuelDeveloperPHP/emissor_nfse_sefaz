@@ -10,6 +10,7 @@ class DriverManager
     {
         return match ($emitente->driver) {
             'simulador' => new SimuladorDriver(),
+            'adn_nacional' => new AdnNacionalDriver(),
             default => new NaoImplementadoDriver(),
         };
     }

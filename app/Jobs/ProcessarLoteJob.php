@@ -6,8 +6,10 @@ use App\Models\Emitente;
 use App\Models\Lote;
 use App\Models\NotaFiscal;
 use App\Services\Nfse\Drivers\DriverManager;
+use App\Services\Nfse\CertificadoA1;
 use App\Services\Nfse\DpsBuilder;
 use App\Services\Nfse\NfseException;
+use App\Services\Nfse\XmlSigner;
 use App\Services\Nfse\XsdValidator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,19 +31,37 @@ class ProcessarLoteJob implements ShouldQueue
     {
     }
 
-    public function handle(DpsBuilder $builder, XsdValidator $validator, DriverManager $drivers): void
+    public function handle(DpsBuilder $builder, XsdValidator $validator, DriverManager $drivers, XmlSigner $signer): void
     {
         $emitente = $this->lote->emitente;
         $driver = $drivers->for($emitente);
+
+        // Open the certificate once, before any DPS number is spent: a bad certificate must fail the
+        // whole lote cleanly instead of burning one nDPS per line.
+        $certificado = null;
+        if ($driver->exigeAssinatura()) {
+            try {
+                $certificado = CertificadoA1::doEmitente($emitente);
+            } catch (NfseException $e) {
+                $this->lote->notas()
+                    ->where('status', NotaFiscal::STATUS_PENDENTE)
+                    ->whereNull('dps_xml')
+                    ->each(fn (NotaFiscal $nota) => $this->rejeitar($nota, [$e->getMessage()]));
+
+                $this->finalizar();
+
+                return;
+            }
+        }
 
         $this->lote->notas()
             ->where('status', NotaFiscal::STATUS_PENDENTE)
             ->whereNull('dps_xml')
             ->orderBy('linha')
-            ->chunkById(200, function ($notas) use ($emitente, $builder, $validator, $driver) {
+            ->chunkById(200, function ($notas) use ($emitente, $builder, $validator, $driver, $signer, $certificado) {
                 foreach ($notas as $nota) {
                     try {
-                        $this->processar($nota, $emitente, $builder, $validator, $driver);
+                        $this->processar($nota, $emitente, $builder, $validator, $driver, $signer, $certificado);
                     } catch (Throwable $e) {
                         report($e);
                         $this->rejeitar($nota, ['Falha inesperada ao processar esta linha: '.$e->getMessage()]);
@@ -52,7 +72,7 @@ class ProcessarLoteJob implements ShouldQueue
         $this->finalizar();
     }
 
-    private function processar(NotaFiscal $nota, Emitente $emitente, DpsBuilder $builder, XsdValidator $validator, $driver): void
+    private function processar(NotaFiscal $nota, Emitente $emitente, DpsBuilder $builder, XsdValidator $validator, $driver, XmlSigner $signer, ?CertificadoA1 $certificado): void
     {
         $numero = DB::transaction(function () use ($emitente) {
             $atual = Emitente::query()->whereKey($emitente->id)->lockForUpdate()->firstOrFail();
@@ -69,6 +89,17 @@ class ProcessarLoteJob implements ShouldQueue
             return;
         }
 
+        if ($certificado !== null) {
+            try {
+                $xml = $signer->assinarDps($xml, $certificado);
+            } catch (NfseException $e) {
+                $this->rejeitar($nota, [$e->getMessage()], $numero, $xml);
+
+                return;
+            }
+        }
+
+        // Validated after signing, so the Signature block is checked against the XSD too.
         $erros = $validator->validarDps($xml);
         if ($erros) {
             $this->rejeitar($nota, $erros, $numero, $xml);
@@ -76,15 +107,22 @@ class ProcessarLoteJob implements ShouldQueue
             return;
         }
 
-        $resultado = $driver->transmitir($emitente, $nota);
+        // Keep the signed DPS before it leaves: if the reply is lost it is the only record of what was sent.
+        $nota->update(['numero' => (string) $numero, 'dps_xml' => $xml]);
+
+        $resultado = $driver->transmitir($emitente, $nota, $xml);
         $autorizada = $resultado['status'] === NotaFiscal::STATUS_AUTORIZADA;
+        $rejeitada = $resultado['status'] === NotaFiscal::STATUS_REJEITADA;
 
         $nota->update([
-            'numero' => (string) $numero,
-            'dps_xml' => $xml,
             'status' => $resultado['status'],
             'emitida_em' => $autorizada ? now() : null,
+            'motivo_rejeicao' => $rejeitada ? ($resultado['mensagens'][0] ?? null) : null,
             'erros' => $autorizada ? null : $resultado['mensagens'],
+            'chave_acesso' => $resultado['chave_acesso'] ?? null,
+            'numero_nfse' => $resultado['numero_nfse'] ?? null,
+            'nfse_xml' => $resultado['nfse_xml'] ?? null,
+            'resposta' => $resultado['resposta'] ?? null,
         ]);
     }
 

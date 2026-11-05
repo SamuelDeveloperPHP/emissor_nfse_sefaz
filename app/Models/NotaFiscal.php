@@ -26,13 +26,17 @@ class NotaFiscal extends Model
         'lote_id',
         'linha',
         'numero',
+        'chave_acesso',
+        'numero_nfse',
         'status',
         'valor_servicos',
         'motivo_rejeicao',
         'emitida_em',
         'payload',
         'dps_xml',
+        'nfse_xml',
         'erros',
+        'resposta',
     ];
 
     protected $casts = [
@@ -40,6 +44,7 @@ class NotaFiscal extends Model
         'emitida_em' => 'datetime',
         'payload' => 'array',
         'erros' => 'array',
+        'resposta' => 'array',
     ];
 
     public function lote(): BelongsTo
