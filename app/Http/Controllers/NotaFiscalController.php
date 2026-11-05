@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\NotaFiscalEmitida;
 use App\Models\Emitente;
 use App\Models\NotaFiscal;
 use App\Services\Nfse\Drivers\DriverManager;
@@ -9,6 +10,7 @@ use App\Services\Nfse\EventoBuilder;
 use App\Services\Nfse\NfseException;
 use App\Services\Nfse\NotaOperacoes;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -96,6 +98,10 @@ class NotaFiscalController extends Controller
                 'pode_danfse' => filled($nota->chave_acesso) && $nota->status !== NotaFiscal::STATUS_PENDENTE,
                 'pode_consultar' => $nota->status === NotaFiscal::STATUS_PENDENTE && filled($nota->dps_xml),
                 'pode_cancelar' => $nota->status === NotaFiscal::STATUS_AUTORIZADA,
+                'pode_enviar_email' => $nota->status === NotaFiscal::STATUS_AUTORIZADA && filled($nota->nfse_xml) && $nota->emitente->driver !== 'simulador',
+                'tomador_email' => $nota->payload['tomador_email'] ?? null,
+                'email_enviado_em' => $nota->email_enviado_em?->format('d/m/Y H:i'),
+                'email_enviado_para' => $nota->email_enviado_para,
             ],
             'motivos' => collect(EventoBuilder::MOTIVOS_CANCELAMENTO)->map(fn ($rotulo, $codigo) => ['codigo' => (string) $codigo, 'rotulo' => $rotulo])->values(),
         ]);
@@ -170,6 +176,30 @@ class NotaFiscalController extends Controller
         }
 
         return back()->with('success', 'Nota cancelada.');
+    }
+
+    /** Queues the e-mail with the XML (and DANFSE, when available) to the tomador. */
+    public function enviarEmail(Request $request, NotaFiscal $nota)
+    {
+        $this->autorizar($request, $nota);
+
+        $dados = $request->validate(['email' => ['required', 'email', 'max:150']], [
+            'email.required' => 'Informe o e-mail de quem vai receber a nota.',
+            'email.email' => 'Esse e-mail não parece válido.',
+        ]);
+
+        if ($nota->status !== NotaFiscal::STATUS_AUTORIZADA || blank($nota->nfse_xml)) {
+            return back()->withErrors(['email' => 'Só dá para enviar uma nota autorizada que tenha o XML da NFS-e.']);
+        }
+        if ($nota->emitente->driver === 'simulador') {
+            return back()->withErrors(['email' => 'Esta nota é do simulador e não tem valor fiscal; ela não é enviada a clientes.']);
+        }
+
+        Mail::to($dados['email'])->queue(new NotaFiscalEmitida($nota));
+
+        $nota->update(['email_enviado_em' => now(), 'email_enviado_para' => $dados['email']]);
+
+        return back()->with('success', 'E-mail na fila de envio para '.$dados['email'].'.');
     }
 
     private function autorizar(Request $request, NotaFiscal $nota): void

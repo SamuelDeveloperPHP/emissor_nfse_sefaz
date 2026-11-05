@@ -23,8 +23,15 @@ const NotaShow = (props: any) => {
   const motivos = props.motivos as { codigo: string; rotulo: string }[];
   const { flash, errors: errosGerais }: any = usePage().props;
   const [cancelando, setCancelando] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   const { data, setData, post, processing, errors, reset } = useForm({ motivo_codigo: "1", motivo: "" });
+  const email = useForm({ email: nota.tomador_email ?? "" });
+
+  const enviarEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    email.post(route("notas.email", nota.id), { preserveScroll: true, onSuccess: () => setEnviando(false) });
+  };
   const erroCancelamento = (errors as Record<string, string>).cancelamento ?? errosGerais?.cancelamento;
 
   useEffect(() => {
@@ -157,6 +164,18 @@ const NotaShow = (props: any) => {
                       Baixar XML do cancelamento
                     </a>
                   )}
+                  {nota.pode_enviar_email && (
+                    <Can permission="notas-fiscais.enviar">
+                      <Button variant="outline-primary" onClick={() => setEnviando(true)}>
+                        Enviar por e-mail
+                      </Button>
+                      {nota.email_enviado_em && (
+                        <div className="text-muted small">
+                          Último envio: {nota.email_enviado_em} para {nota.email_enviado_para}
+                        </div>
+                      )}
+                    </Can>
+                  )}
                   {nota.pode_consultar && (
                     <Button variant="primary" onClick={consultar}>
                       Consultar situação
@@ -202,6 +221,27 @@ const NotaShow = (props: any) => {
             </Button>
             <Button type="submit" variant="danger" disabled={processing || data.motivo.trim().length < 15}>
               {processing ? "Cancelando..." : "Cancelar nota"}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+      <Modal show={enviando} onHide={() => setEnviando(false)} centered>
+        <Form onSubmit={enviarEmail}>
+          <Modal.Header closeButton>
+            <Modal.Title>Enviar nota por e-mail</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p className="text-muted">O e-mail leva o XML da NFS-e{nota.pode_danfse ? " e o DANFSE em PDF, quando o ADN fornecer" : ""}.</p>
+            <Form.Label>E-mail de quem vai receber</Form.Label>
+            <Form.Control type="email" value={email.data.email} onChange={(e) => email.setData("email", e.target.value)} isInvalid={!!email.errors.email} autoFocus />
+            <Form.Control.Feedback type="invalid">{email.errors.email}</Form.Control.Feedback>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="light" onClick={() => setEnviando(false)}>
+              Voltar
+            </Button>
+            <Button type="submit" variant="primary" disabled={email.processing || email.data.email.trim() === ""}>
+              {email.processing ? "Enviando..." : "Enviar"}
             </Button>
           </Modal.Footer>
         </Form>

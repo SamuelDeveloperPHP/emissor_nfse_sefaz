@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\NotaFiscalEmitida;
 use App\Models\Emitente;
 use App\Models\NotaFiscal;
 use App\Models\User;
@@ -12,6 +13,7 @@ use App\Services\Nfse\XsdValidator;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\GeraCertificadoDeTeste;
 use Tests\TestCase;
@@ -287,6 +289,97 @@ class NotasFiscaisTest extends TestCase
 
         $this->expectException(\App\Services\Nfse\NfseException::class);
         (new EventoBuilder)->cancelamento($emitente, '123', '1', 'Motivo com mais de quinze letras', 'homologacao');
+    }
+
+    // ---- e-mail ---------------------------------------------------------------------------------
+
+    public function test_an_authorized_nota_is_queued_by_e_mail_with_the_xml_and_pdf(): void
+    {
+        Mail::fake();
+        $nota = $this->nota($this->emitente(), 'autorizada', ['nfse_xml' => '<NFSe>conteudo</NFSe>']);
+
+        $this->actingAs($this->admin())->post(route('notas.email', $nota), ['email' => 'cliente@exemplo.com.br'])
+            ->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        Mail::assertQueued(NotaFiscalEmitida::class, fn (NotaFiscalEmitida $mail) => $mail->hasTo('cliente@exemplo.com.br'));
+
+        $nota->refresh();
+        $this->assertSame('cliente@exemplo.com.br', $nota->email_enviado_para);
+        $this->assertNotNull($nota->email_enviado_em);
+    }
+
+    /** @return array<int, string> attachment file names of the message really built and "sent" */
+    private function anexosEnviados(NotaFiscal $nota): array
+    {
+        config(['mail.default' => 'array']);
+        Mail::mailer('array')->to('cliente@exemplo.com.br')->sendNow(new NotaFiscalEmitida($nota));
+
+        $mensagem = Mail::mailer('array')->getSymfonyTransport()->messages()->last()->getOriginalMessage();
+
+        return array_map(fn ($anexo) => $anexo->getFilename(), $mensagem->getAttachments());
+    }
+
+    public function test_the_message_carries_the_xml_and_the_pdf_when_the_adn_provides_it(): void
+    {
+        Http::fake(['*' => Http::response('%PDF-1.4 fake', 200)]);
+        $nota = $this->nota($this->emitente(), 'autorizada', ['nfse_xml' => '<NFSe>conteudo</NFSe>']);
+
+        $this->assertSame(['nfse-'.self::CHAVE.'.xml', 'danfse-'.self::CHAVE.'.pdf'], $this->anexosEnviados($nota));
+    }
+
+    public function test_the_message_still_goes_with_the_xml_when_the_pdf_is_unavailable(): void
+    {
+        Http::fake(['*' => Http::response('', 500)]);
+        $nota = $this->nota($this->emitente(), 'autorizada', ['nfse_xml' => '<NFSe/>']);
+
+        $this->assertSame(['nfse-'.self::CHAVE.'.xml'], $this->anexosEnviados($nota));
+    }
+
+    public function test_simulated_unauthorized_or_xmlless_notas_are_never_e_mailed(): void
+    {
+        Mail::fake();
+        $this->actingAs($this->admin());
+
+        $simulada = $this->nota($this->emitente('simulador'), 'autorizada', ['nfse_xml' => '<NFSe/>']);
+        $pendente = $this->nota($this->emitente(), 'pendente');
+        $semXml = $this->nota($this->emitente(), 'autorizada', ['nfse_xml' => null, 'chave_acesso' => str_repeat('3', 50)]);
+
+        foreach ([$simulada, $pendente, $semXml] as $nota) {
+            $this->post(route('notas.email', $nota), ['email' => 'cliente@exemplo.com.br'])->assertSessionHasErrors('email');
+        }
+
+        $this->post(route('notas.email', $semXml), ['email' => 'isso-nao-e-email'])->assertSessionHasErrors('email');
+        Mail::assertNothingQueued();
+    }
+
+    public function test_sending_by_e_mail_needs_its_own_permission_and_emitente_access(): void
+    {
+        Mail::fake();
+        $meu = $this->emitente();
+        $outro = $this->emitente();
+        $nota = $this->nota($meu, 'autorizada', ['nfse_xml' => '<NFSe/>']);
+        $alheia = $this->nota($outro, 'autorizada', ['nfse_xml' => '<NFSe/>', 'chave_acesso' => str_repeat('4', 50)]);
+
+        $operador = $this->operador($meu);
+        $operador->givePermissionTo('notas-fiscais.view');
+
+        $this->actingAs($operador)->post(route('notas.email', $nota), ['email' => 'a@b.com'])->assertForbidden();
+
+        $operador->givePermissionTo('notas-fiscais.enviar');
+        $this->post(route('notas.email', $alheia), ['email' => 'a@b.com'])->assertForbidden();
+        $this->post(route('notas.email', $nota), ['email' => 'a@b.com'])->assertSessionHasNoErrors();
+
+        Mail::assertQueuedCount(1);
+    }
+
+    public function test_the_e_mail_renders_without_markup_injection(): void
+    {
+        $nota = $this->nota($this->emitente(), 'autorizada', ['payload' => ['tomador_nome' => '<script>alert(1)</script>']]);
+
+        $html = (new NotaFiscalEmitida($nota))->render();
+
+        $this->assertStringNotContainsString('<script>', $html);
+        $this->assertStringContainsString('&lt;script&gt;', $html);
     }
 
     // ---- DANFSE ---------------------------------------------------------------------------------

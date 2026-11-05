@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::get('notas/{nota}/xml/{tipo}', [NotaFiscalController::class, 'xml'])->middleware('permission:notas-fiscais.view')->name('notas.xml');
     Route::get('notas/{nota}/danfse', [NotaFiscalController::class, 'danfse'])->middleware('permission:notas-fiscais.view')->name('notas.danfse');
     Route::post('notas/{nota}/consultar', [NotaFiscalController::class, 'consultar'])->middleware('permission:notas-fiscais.view')->name('notas.consultar');
+    Route::post('notas/{nota}/enviar-email', [NotaFiscalController::class, 'enviarEmail'])->middleware('permission:notas-fiscais.enviar')->name('notas.email');
     Route::post('notas/{nota}/cancelar', [NotaFiscalController::class, 'cancelar'])->middleware('permission:notas-fiscais.cancelar')->name('notas.cancelar');
 
     Route::get('tomadores', [TomadorController::class, 'index'])->middleware('permission:tomadores.view')->name('tomadores.index');
