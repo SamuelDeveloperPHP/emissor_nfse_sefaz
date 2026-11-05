@@ -120,6 +120,14 @@ class ModulesSeeder extends Seeder
             'order' => 17,
         ]);
 
+        Module::updateOrCreate(['key' => 'recorrencias'], [
+            'name' => 'Notas recorrentes',
+            'icon' => 'bx bx-calendar-event',
+            'route' => 'recorrencias.index',
+            'parent_id' => $fiscal->id,
+            'order' => 18,
+        ]);
+
         Module::updateOrCreate(['key' => 'monitoramento'], [
             'name' => 'Monitoramento',
             'icon' => 'bx bx-pulse',

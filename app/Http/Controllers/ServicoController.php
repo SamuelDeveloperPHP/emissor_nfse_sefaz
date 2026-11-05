@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Emitente;
+use App\Models\Recorrencia;
 use App\Models\Servico;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -44,6 +45,10 @@ class ServicoController extends Controller
     public function destroy(Request $request, Servico $servico)
     {
         $this->autorizar($request, $servico->emitente_id);
+        if (Recorrencia::where('servico_id', $servico->id)->exists()) {
+            return back()->with('error', 'Este serviço é usado por uma nota recorrente. Exclua ou troque a recorrência antes.');
+        }
+
         $servico->delete();
 
         return back()->with('success', 'Serviço excluído.');

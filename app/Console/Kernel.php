@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
         // Shared hosting has no long-running worker: one cron entry runs `schedule:run` every minute.
         $schedule->command('queue:work --stop-when-empty --max-time=50')->everyMinute()->withoutOverlapping();
         $schedule->command('nfse:consultar-pendentes')->everyFiveMinutes()->withoutOverlapping();
+        $schedule->command('nfse:emitir-recorrentes')->dailyAt('06:00')->withoutOverlapping();
     }
 
     /**

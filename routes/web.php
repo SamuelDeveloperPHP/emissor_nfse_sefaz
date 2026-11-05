@@ -7,6 +7,7 @@ use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\NotaFiscalController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RecorrenciaController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ServicoController;
 use App\Http\Controllers\TomadorController;
@@ -71,6 +72,11 @@ Route::middleware('auth')->group(function () {
     Route::post('servicos', [ServicoController::class, 'store'])->middleware('permission:servicos.create')->name('servicos.store');
     Route::put('servicos/{servico}', [ServicoController::class, 'update'])->middleware('permission:servicos.edit')->name('servicos.update');
     Route::delete('servicos/{servico}', [ServicoController::class, 'destroy'])->middleware('permission:servicos.delete')->name('servicos.destroy');
+
+    Route::get('recorrencias', [RecorrenciaController::class, 'index'])->middleware('permission:recorrencias.view')->name('recorrencias.index');
+    Route::post('recorrencias', [RecorrenciaController::class, 'store'])->middleware('permission:recorrencias.create')->name('recorrencias.store');
+    Route::put('recorrencias/{recorrencia}', [RecorrenciaController::class, 'update'])->middleware('permission:recorrencias.edit')->name('recorrencias.update');
+    Route::delete('recorrencias/{recorrencia}', [RecorrenciaController::class, 'destroy'])->middleware('permission:recorrencias.delete')->name('recorrencias.destroy');
 
     // System-wide settings: only the Administrador role, whatever the permission matrix says.
     Route::get('configuracoes', [SettingController::class, 'index'])->middleware('role:Administrador')->name('configuracoes.index');

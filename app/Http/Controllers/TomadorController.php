@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Emitente;
+use App\Models\Recorrencia;
 use App\Models\Tomador;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -45,6 +46,10 @@ class TomadorController extends Controller
     public function destroy(Request $request, Tomador $tomador)
     {
         $this->autorizar($request, $tomador->emitente_id);
+        if (Recorrencia::where('tomador_id', $tomador->id)->exists()) {
+            return back()->with('error', 'Este tomador é usado por uma nota recorrente. Exclua ou troque a recorrência antes.');
+        }
+
         $tomador->delete();
 
         return back()->with('success', 'Tomador excluído.');
