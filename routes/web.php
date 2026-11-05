@@ -8,6 +8,8 @@ use App\Http\Controllers\NotaFiscalController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\ServicoController;
+use App\Http\Controllers\TomadorController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VelzonRoutesController;
@@ -58,6 +60,15 @@ Route::middleware('auth')->group(function () {
     Route::get('notas/{nota}/danfse', [NotaFiscalController::class, 'danfse'])->middleware('permission:notas-fiscais.view')->name('notas.danfse');
     Route::post('notas/{nota}/consultar', [NotaFiscalController::class, 'consultar'])->middleware('permission:notas-fiscais.view')->name('notas.consultar');
     Route::post('notas/{nota}/cancelar', [NotaFiscalController::class, 'cancelar'])->middleware('permission:notas-fiscais.cancelar')->name('notas.cancelar');
+
+    Route::get('tomadores', [TomadorController::class, 'index'])->middleware('permission:tomadores.view')->name('tomadores.index');
+    Route::post('tomadores', [TomadorController::class, 'store'])->middleware('permission:tomadores.create')->name('tomadores.store');
+    Route::put('tomadores/{tomador}', [TomadorController::class, 'update'])->middleware('permission:tomadores.edit')->name('tomadores.update');
+    Route::delete('tomadores/{tomador}', [TomadorController::class, 'destroy'])->middleware('permission:tomadores.delete')->name('tomadores.destroy');
+    Route::get('servicos', [ServicoController::class, 'index'])->middleware('permission:servicos.view')->name('servicos.index');
+    Route::post('servicos', [ServicoController::class, 'store'])->middleware('permission:servicos.create')->name('servicos.store');
+    Route::put('servicos/{servico}', [ServicoController::class, 'update'])->middleware('permission:servicos.edit')->name('servicos.update');
+    Route::delete('servicos/{servico}', [ServicoController::class, 'destroy'])->middleware('permission:servicos.delete')->name('servicos.destroy');
 
     // System-wide settings: only the Administrador role, whatever the permission matrix says.
     Route::get('configuracoes', [SettingController::class, 'index'])->middleware('role:Administrador')->name('configuracoes.index');

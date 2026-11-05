@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Jobs\ProcessarLoteJob;
 use App\Models\Emitente;
 use App\Models\Lote;
+use App\Models\Servico;
 use App\Models\Setting;
+use App\Models\Tomador;
 use App\Services\Nfse\LoteImporter;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -127,6 +129,8 @@ class LoteController extends Controller
                 ->active()
                 ->orderBy('razao_social')
                 ->get(['id', 'razao_social', 'cnpj', 'driver', 'ambiente']),
+            'tomadores' => Tomador::query()->visibleTo($request->user())->orderBy('nome')->get(),
+            'servicos' => Servico::query()->visibleTo($request->user())->orderBy('nome')->get(),
             'permite_escolher_ambiente' => Setting::bool(Setting::ESCOLHER_AMBIENTE),
         ]);
     }
@@ -139,6 +143,12 @@ class LoteController extends Controller
             'tomador_documento' => ['required', 'string', 'max:20'],
             'tomador_nome' => ['required', 'string', 'max:300'],
             'tomador_email' => ['nullable', 'email', 'max:80'],
+            'tomador_cep' => ['nullable', 'string', 'max:10'],
+            'tomador_logradouro' => ['nullable', 'string', 'max:255'],
+            'tomador_numero' => ['nullable', 'string', 'max:60'],
+            'tomador_complemento' => ['nullable', 'string', 'max:156'],
+            'tomador_bairro' => ['nullable', 'string', 'max:60'],
+            'tomador_codigo_municipio' => ['nullable', 'string', 'max:10'],
             'descricao_servico' => ['required', 'string', 'max:2000'],
             'codigo_tributacao_nacional' => ['required', 'string', 'max:10'],
             'valor_servico' => ['required', 'string', 'max:20'],

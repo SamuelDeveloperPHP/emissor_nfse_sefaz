@@ -104,6 +104,22 @@ class ModulesSeeder extends Seeder
             'actions' => ['cancelar'],
         ]);
 
+        Module::updateOrCreate(['key' => 'tomadores'], [
+            'name' => 'Tomadores',
+            'icon' => 'bx bx-group',
+            'route' => 'tomadores.index',
+            'parent_id' => $fiscal->id,
+            'order' => 16,
+        ]);
+
+        Module::updateOrCreate(['key' => 'servicos'], [
+            'name' => 'Serviços',
+            'icon' => 'bx bx-list-check',
+            'route' => 'servicos.index',
+            'parent_id' => $fiscal->id,
+            'order' => 17,
+        ]);
+
         Module::updateOrCreate(['key' => 'monitoramento'], [
             'name' => 'Monitoramento',
             'icon' => 'bx bx-pulse',

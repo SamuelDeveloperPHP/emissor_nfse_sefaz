@@ -78,6 +78,18 @@ class DpsBuilder
         $documento = preg_replace('/\D/', '', (string) ($payload['tomador_documento'] ?? ''));
         $this->child($doc, $toma, strlen($documento) === 14 ? 'CNPJ' : 'CPF', $documento);
         $this->child($doc, $toma, 'xNome', (string) ($payload['tomador_nome'] ?? ''));
+        if ($this->enderecoCompleto($payload)) {
+            $end = $this->child($doc, $toma, 'end');
+            $endNac = $this->child($doc, $end, 'endNac');
+            $this->child($doc, $endNac, 'cMun', $payload['tomador_codigo_municipio']);
+            $this->child($doc, $endNac, 'CEP', $payload['tomador_cep']);
+            $this->child($doc, $end, 'xLgr', $payload['tomador_logradouro']);
+            $this->child($doc, $end, 'nro', $payload['tomador_numero']);
+            if (filled($payload['tomador_complemento'] ?? null)) {
+                $this->child($doc, $end, 'xCpl', $payload['tomador_complemento']);
+            }
+            $this->child($doc, $end, 'xBairro', $payload['tomador_bairro']);
+        }
         if (filled($payload['tomador_email'] ?? null)) {
             $this->child($doc, $toma, 'email', $payload['tomador_email']);
         }
@@ -103,6 +115,17 @@ class DpsBuilder
         $this->child($doc, $totTrib, 'indTotTrib', '0');
 
         return $doc->saveXML();
+    }
+
+    private function enderecoCompleto(array $payload): bool
+    {
+        foreach (['tomador_cep', 'tomador_codigo_municipio', 'tomador_logradouro', 'tomador_numero', 'tomador_bairro'] as $campo) {
+            if (blank($payload[$campo] ?? null)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function child(DOMDocument $doc, DOMElement $parent, string $name, ?string $value = null): DOMElement

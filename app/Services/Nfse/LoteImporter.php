@@ -24,6 +24,13 @@ class LoteImporter
         'iss_retido',
         'data_competencia',
         'municipio_prestacao',
+        // Optional: the tomador's address. The DPS only carries it when it is complete.
+        'tomador_cep',
+        'tomador_logradouro',
+        'tomador_numero',
+        'tomador_complemento',
+        'tomador_bairro',
+        'tomador_codigo_municipio',
     ];
 
     private const OBRIGATORIAS = [
@@ -106,7 +113,7 @@ class LoteImporter
     public static function modeloCsv(): string
     {
         return "\xEF\xBB\xBF".implode(';', self::COLUNAS)."\n"
-            ."12345678909;Maria da Silva;maria@exemplo.com.br;Consultoria contábil mensal;171901;1500,00;2,00;0;".now()->toDateString().";\n";
+            ."12345678909;Maria da Silva;maria@exemplo.com.br;Consultoria contábil mensal;171901;1500,00;2,00;0;".now()->toDateString().";;;;;;;\n";
     }
 
     /**
@@ -209,7 +216,26 @@ class LoteImporter
             $erros[] = 'O município de prestação precisa ser o código IBGE de 7 dígitos.';
         }
 
+        $endereco = [
+            'tomador_cep' => preg_replace('/\D/', '', $linha['tomador_cep'] ?? ''),
+            'tomador_logradouro' => trim($linha['tomador_logradouro'] ?? ''),
+            'tomador_numero' => trim($linha['tomador_numero'] ?? ''),
+            'tomador_complemento' => trim($linha['tomador_complemento'] ?? ''),
+            'tomador_bairro' => trim($linha['tomador_bairro'] ?? ''),
+            'tomador_codigo_municipio' => preg_replace('/\D/', '', $linha['tomador_codigo_municipio'] ?? ''),
+        ];
+
+        // Partial addresses are refused: the schema needs all five of these together or none.
+        $informados = array_filter($endereco, fn ($v, $k) => $k !== 'tomador_complemento' && $v !== '', ARRAY_FILTER_USE_BOTH);
+        if ($informados !== []) {
+            if (strlen($endereco['tomador_cep']) !== 8 || strlen($endereco['tomador_codigo_municipio']) !== 7
+                || $endereco['tomador_logradouro'] === '' || $endereco['tomador_numero'] === '' || $endereco['tomador_bairro'] === '') {
+                $erros[] = 'O endereço do tomador está incompleto: informe CEP (8 dígitos), logradouro, número, bairro e código IBGE do município (7 dígitos), ou deixe tudo em branco.';
+            }
+        }
+
         $payload = [
+            ...$endereco,
             'tomador_documento' => $documento,
             'tomador_nome' => $nome,
             'tomador_email' => $linha['tomador_email'] ?? '',

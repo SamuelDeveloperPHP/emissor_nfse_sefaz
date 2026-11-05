@@ -18,6 +18,8 @@ const hoje = () => new Date().toISOString().slice(0, 10);
 const Emitir = (props: any) => {
   const emitentes = props.emitentes as EmitenteOption[];
   const permiteAmbiente = !!props.permite_escolher_ambiente;
+  const tomadores = (props.tomadores ?? []) as any[];
+  const servicos = (props.servicos ?? []) as any[];
 
   const { data, setData, post, processing, errors } = useForm({
     emitente_id: "",
@@ -25,6 +27,12 @@ const Emitir = (props: any) => {
     tomador_documento: "",
     tomador_nome: "",
     tomador_email: "",
+    tomador_cep: "",
+    tomador_logradouro: "",
+    tomador_numero: "",
+    tomador_complemento: "",
+    tomador_bairro: "",
+    tomador_codigo_municipio: "",
     descricao_servico: "",
     codigo_tributacao_nacional: "",
     valor_servico: "",
@@ -36,6 +44,39 @@ const Emitir = (props: any) => {
   const emitente = emitentes.find((e) => String(e.id) === data.emitente_id);
   const errosDaNota = ((errors as Record<string, any>).nota ?? []) as string[] | string;
   const listaDeErros = Array.isArray(errosDaNota) ? errosDaNota : [errosDaNota];
+
+  // Picking a registered tomador or service fills the matching fields; they stay editable.
+  const escolherTomador = (id: string) => {
+    const t = tomadores.find((item) => String(item.id) === id);
+    if (!t) return;
+    setData((atual) => ({
+      ...atual,
+      tomador_documento: t.documento,
+      tomador_nome: t.nome,
+      tomador_email: t.email ?? "",
+      tomador_cep: t.cep ?? "",
+      tomador_logradouro: t.logradouro ?? "",
+      tomador_numero: t.numero ?? "",
+      tomador_complemento: t.complemento ?? "",
+      tomador_bairro: t.bairro ?? "",
+      tomador_codigo_municipio: t.codigo_municipio ?? "",
+    }));
+  };
+
+  const escolherServico = (id: string) => {
+    const s = servicos.find((item) => String(item.id) === id);
+    if (!s) return;
+    setData((atual) => ({
+      ...atual,
+      descricao_servico: s.descricao,
+      codigo_tributacao_nacional: s.codigo_tributacao,
+      aliquota_iss: s.aliquota !== null ? String(s.aliquota).replace(".", ",") : "",
+      iss_retido: !!s.iss_retido,
+    }));
+  };
+
+  const tomadoresDoEmitente = tomadores.filter((t) => String(t.emitente_id) === data.emitente_id);
+  const servicosDoEmitente = servicos.filter((s) => String(s.emitente_id) === data.emitente_id);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +138,33 @@ const Emitir = (props: any) => {
                         error={errors.ambiente}
                       />
                     </Col>
+                  )}
+
+                  {data.emitente_id && (tomadoresDoEmitente.length > 0 || servicosDoEmitente.length > 0) && (
+                    <>
+                      <Col md={6}>
+                        <Form.Label>Tomador cadastrado</Form.Label>
+                        <Form.Select key={"t" + data.emitente_id} defaultValue="" onChange={(e) => escolherTomador(e.target.value)} disabled={tomadoresDoEmitente.length === 0}>
+                          <option value="">{tomadoresDoEmitente.length === 0 ? "Nenhum tomador cadastrado" : "Escolher e preencher os dados"}</option>
+                          {tomadoresDoEmitente.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.nome}
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Label>Serviço cadastrado</Form.Label>
+                        <Form.Select key={"s" + data.emitente_id} defaultValue="" onChange={(e) => escolherServico(e.target.value)} disabled={servicosDoEmitente.length === 0}>
+                          <option value="">{servicosDoEmitente.length === 0 ? "Nenhum serviço cadastrado" : "Escolher e preencher os dados"}</option>
+                          {servicosDoEmitente.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.nome}
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </Col>
+                    </>
                   )}
 
                   <Col md={4}>
