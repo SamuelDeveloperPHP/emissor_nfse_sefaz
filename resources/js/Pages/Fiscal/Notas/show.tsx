@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Alert, Button, Card, Col, Container, Form, Modal, Row } from "react-bootstrap";
-import { Head, Link, router, useForm, usePage } from "@inertiajs/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import Swal from "sweetalert2";
+import { Head, Link, router, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import { Can } from "../../../common/usePermission";
+import { avisarCamposInvalidos, useFlashAlert } from "../../../common/alerta";
 import { NotaBadge, moeda } from "../Lotes/status";
 import { nomeDoAmbiente } from "../Lotes/AmbienteField";
 
@@ -21,34 +21,46 @@ const Campo = ({ rotulo, children }: { rotulo: string; children: React.ReactNode
 const NotaShow = (props: any) => {
   const nota = props.nota;
   const motivos = props.motivos as { codigo: string; rotulo: string }[];
-  const { flash, errors: errosGerais }: any = usePage().props;
   const [cancelando, setCancelando] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [consultando, setConsultando] = useState(false);
+
+  useFlashAlert();
 
   const { data, setData, post, processing, errors, reset } = useForm({ motivo_codigo: "1", motivo: "" });
   const email = useForm({ email: nota.tomador_email ?? "" });
 
   const enviarEmail = (e: React.FormEvent) => {
     e.preventDefault();
-    email.post(route("notas.email", nota.id), { preserveScroll: true, onSuccess: () => setEnviando(false) });
+    email.post(route("notas.email", nota.id), { preserveScroll: true, onSuccess: () => setEnviando(false), onError: avisarCamposInvalidos });
   };
-  const erroCancelamento = (errors as Record<string, string>).cancelamento ?? errosGerais?.cancelamento;
 
-  useEffect(() => {
-    if (flash?.success) toast.success(flash.success, { autoClose: 4000 });
-    if (flash?.error) toast.error(flash.error, { autoClose: 6000 });
-  }, [flash]);
+  const consultar = () =>
+    router.post(route("notas.consultar", nota.id), {}, { preserveScroll: true, onStart: () => setConsultando(true), onFinish: () => setConsultando(false) });
 
-  const consultar = () => router.post(route("notas.consultar", nota.id), {}, { preserveScroll: true });
-
-  const cancelar = (e: React.FormEvent) => {
+  const cancelar = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const resposta = await Swal.fire({
+      icon: "warning",
+      title: "Cancelar esta nota?",
+      text: "O cancelamento é registrado no ADN e não pode ser desfeito.",
+      showCancelButton: true,
+      confirmButtonText: "Cancelar a nota",
+      cancelButtonText: "Voltar",
+      confirmButtonColor: "#d63939",
+      focusCancel: true,
+      reverseButtons: true,
+    });
+    if (!resposta.isConfirmed) return;
+
     post(route("notas.cancelar", nota.id), {
       preserveScroll: true,
       onSuccess: () => {
         setCancelando(false);
         reset();
       },
+      onError: avisarCamposInvalidos,
     });
   };
 
@@ -75,9 +87,22 @@ const NotaShow = (props: any) => {
                   Nota do simulador local: não foi emitida de verdade e não tem valor fiscal.
                 </Alert>
               )}
+              {nota.substituida_por && (
+                <Alert variant="secondary" className="mt-3 mb-0">
+                  Esta nota foi <strong>substituída</strong> pela{" "}
+                  <Link href={route("notas.show", nota.substituida_por.id)}>NFS-e {nota.substituida_por.numero_nfse ?? `nº ${nota.substituida_por.id}`}</Link>.
+                </Alert>
+              )}
+              {nota.substitui && (
+                <Alert variant="info" className="mt-3 mb-0">
+                  Esta nota <strong>substitui</strong> a <Link href={route("notas.show", nota.substitui.id)}>NFS-e {nota.substitui.numero_nfse ?? `nº ${nota.substitui.id}`}</Link>
+                  {nota.status === "autorizada" ? "." : ". A nota anterior continua valendo até esta ser autorizada."}
+                </Alert>
+              )}
               {nota.status === "pendente" && (
                 <Alert variant="info" className="mt-3 mb-0">
-                  Esta nota ainda não tem resposta confirmada. Use <strong>Consultar situação</strong> antes de emitir outra; reenviar pode duplicar a nota.
+                  Esta nota ainda não tem resposta confirmada. O sistema consulta o ADN a cada 5 minutos; você também pode usar <strong>Consultar situação</strong>. Não emita outra igual:
+                  reenviar pode duplicar a nota.
                 </Alert>
               )}
               {nota.status === "rejeitada" && nota.erros.length > 0 && (
@@ -111,12 +136,11 @@ const NotaShow = (props: any) => {
                       <Campo rotulo="Nº da NFS-e">{nota.numero_nfse}</Campo>
                       <Campo rotulo="Nº da DPS">{nota.numero_dps}</Campo>
                       <Campo rotulo="Chave de acesso">{nota.chave_acesso}</Campo>
-                      <Campo rotulo="Lote">
-                        {nota.lote_id && <Link href={route("lotes.show", nota.lote_id)}>Lote {nota.lote_id}</Link>}
-                      </Campo>
+                      <Campo rotulo="Lote">{nota.lote_id && <Link href={route("lotes.show", nota.lote_id)}>Lote {nota.lote_id}</Link>}</Campo>
                     </Col>
                   </Row>
                   <Campo rotulo="Descrição do serviço">{nota.descricao}</Campo>
+                  {nota.substituicao_motivo && <Campo rotulo="Motivo da substituição">{nota.substituicao_motivo}</Campo>}
                 </Card.Body>
               </Card>
             </Col>
@@ -132,8 +156,8 @@ const NotaShow = (props: any) => {
                   <Campo rotulo="Última consulta ao ADN">{nota.consultada_em}</Campo>
                   {nota.status === "cancelada" && (
                     <>
-                      <Campo rotulo="Cancelada em">{nota.cancelada_em}</Campo>
-                      <Campo rotulo="Motivo do cancelamento">{nota.cancelamento_motivo}</Campo>
+                      <Campo rotulo={nota.substituida_por ? "Substituída em" : "Cancelada em"}>{nota.cancelada_em}</Campo>
+                      <Campo rotulo={nota.substituida_por ? "Motivo" : "Motivo do cancelamento"}>{nota.cancelamento_motivo}</Campo>
                     </>
                   )}
                 </Card.Body>
@@ -177,9 +201,16 @@ const NotaShow = (props: any) => {
                     </Can>
                   )}
                   {nota.pode_consultar && (
-                    <Button variant="primary" onClick={consultar}>
-                      Consultar situação
+                    <Button variant="primary" onClick={consultar} disabled={consultando}>
+                      {consultando ? "Consultando..." : "Consultar situação"}
                     </Button>
+                  )}
+                  {nota.pode_substituir && (
+                    <Can permission="notas-fiscais.substituir">
+                      <Link className="btn btn-outline-warning" href={route("notas.substituir", nota.id)}>
+                        Substituir por nota corrigida
+                      </Link>
+                    </Can>
                   )}
                   {nota.pode_cancelar && (
                     <Can permission="notas-fiscais.cancelar">
@@ -201,8 +232,7 @@ const NotaShow = (props: any) => {
             <Modal.Title>Cancelar nota</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <p>O cancelamento é registrado no ADN e não pode ser desfeito.</p>
-            {erroCancelamento && <Alert variant="danger">{erroCancelamento}</Alert>}
+            <p className="text-muted">Para corrigir um valor ou um dado da nota, prefira a substituição: ela emite a nota certa e retira a errada de uma vez.</p>
             <Form.Label>Motivo</Form.Label>
             <Form.Select className="mb-3" value={data.motivo_codigo} onChange={(e) => setData("motivo_codigo", e.target.value)}>
               {motivos.map((motivo) => (
@@ -225,6 +255,7 @@ const NotaShow = (props: any) => {
           </Modal.Footer>
         </Form>
       </Modal>
+
       <Modal show={enviando} onHide={() => setEnviando(false)} centered>
         <Form onSubmit={enviarEmail}>
           <Modal.Header closeButton>
@@ -246,7 +277,6 @@ const NotaShow = (props: any) => {
           </Modal.Footer>
         </Form>
       </Modal>
-      <ToastContainer closeButton={false} limit={1} />
     </Layout>
   );
 };

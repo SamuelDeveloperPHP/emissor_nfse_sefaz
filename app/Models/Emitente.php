@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -32,6 +33,7 @@ class Emitente extends Model
         'ambiente',
         'driver',
         'driver_config',
+        // Set only by GestaoDeCertificado (and tests); no controller passes request data into them.
         'certificado_path',
         'certificado_password',
         'certificado_validade',
@@ -47,6 +49,8 @@ class Emitente extends Model
      */
     protected $hidden = [
         'certificado_password',
+        'certificado_path',
+        'certificado_impressao',
     ];
 
     /**
@@ -58,12 +62,18 @@ class Emitente extends Model
         'driver_config' => 'array',
         'certificado_password' => 'encrypted',
         'certificado_validade' => 'date',
+        'certificado_enviado_em' => 'datetime',
         'is_active' => 'boolean',
     ];
 
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'emitente_user');
+    }
+
+    public function certificadoEnviadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'certificado_enviado_por');
     }
 
     public function notasFiscais(): HasMany

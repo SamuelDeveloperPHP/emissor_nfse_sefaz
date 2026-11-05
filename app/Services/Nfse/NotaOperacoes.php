@@ -2,12 +2,15 @@
 
 namespace App\Services\Nfse;
 
+use App\Models\Lote;
 use App\Models\NotaFiscal;
+use App\Models\User;
 use App\Services\Nfse\Drivers\DriverManager;
 
 /**
- * Operations on a nota that already exists: looking up a pending one at the ADN and cancelling an
- * authorized one. Shared by the Notas Fiscais screen and the scheduled lookup command.
+ * Operations on a nota that already exists: looking up a pending one at the ADN, cancelling an
+ * authorized one and replacing it with a corrected one. Shared by the Notas Fiscais screens, the
+ * lote job and the scheduled lookup command.
  */
 class NotaOperacoes
 {
@@ -16,6 +19,7 @@ class NotaOperacoes
         private readonly EventoBuilder $eventos,
         private readonly XmlSigner $signer,
         private readonly XsdValidator $validator,
+        private readonly LoteImporter $importer,
     ) {
     }
 
@@ -54,6 +58,7 @@ class NotaOperacoes
         }
 
         $nota->update($campos);
+        $this->concluirSubstituicao($nota);
 
         return ['status' => $nota->status, 'mensagens' => $resultado['mensagens']];
     }
@@ -100,5 +105,86 @@ class NotaOperacoes
         }
 
         return ['cancelada' => $resultado['cancelada'], 'mensagens' => $resultado['mensagens']];
+    }
+
+    /**
+     * Creates the lote that issues the corrected nota replacing an authorized one. The new nota is an
+     * ordinary DPS that names the old one (group "subst"); the old one only becomes "cancelada" when
+     * the new one is authorized (see concluirSubstituicao). Returns the lote, not yet processed.
+     *
+     * @param  array<string, string>  $linha  the corrected data, laid out like a CSV line
+     *
+     * @throws NfseException for anything the user must fix first
+     */
+    public function prepararSubstituicao(NotaFiscal $original, User $por, array $linha, string $codigoMotivo, string $motivo): Lote
+    {
+        $original->loadMissing('emitente', 'lote');
+
+        if ($original->status !== NotaFiscal::STATUS_AUTORIZADA) {
+            throw new NfseException('Só é possível substituir uma nota autorizada.');
+        }
+        if (! preg_match('/^\d{50}$/', (string) $original->chave_acesso)) {
+            throw new NfseException('A nota não tem chave de acesso; consulte a situação dela antes de substituir.');
+        }
+        if (! isset(DpsBuilder::MOTIVOS_SUBSTITUICAO[$codigoMotivo])) {
+            throw new NfseException('Escolha um motivo de substituição válido.');
+        }
+        if (mb_strlen(trim($motivo)) < 15) {
+            throw new NfseException('Explique o motivo da substituição com pelo menos 15 caracteres.');
+        }
+
+        $emAndamento = NotaFiscal::query()
+            ->where('emitente_id', $original->emitente_id)
+            ->whereIn('status', [NotaFiscal::STATUS_PENDENTE, NotaFiscal::STATUS_AUTORIZADA])
+            ->where('payload', 'like', '%"substitui_chave":"'.$original->chave_acesso.'"%')
+            ->exists();
+        if ($emAndamento) {
+            throw new NfseException('Esta nota já tem uma substituta emitida ou em andamento.');
+        }
+
+        [, $erros] = $this->importer->normalizar($linha);
+        if ($erros) {
+            throw new NfseException(implode(' ', $erros));
+        }
+
+        return $this->importer->importarLinha(
+            $original->emitente,
+            $por,
+            $linha,
+            'Substituição da NFS-e '.($original->numero_nfse ?? $original->id),
+            // A substitute belongs to the same environment as the nota it replaces.
+            $original->lote?->ambiente ?? $original->emitente->ambiente,
+            [
+                'substitui_chave' => $original->chave_acesso,
+                'substituicao_motivo_codigo' => $codigoMotivo,
+                'substituicao_motivo' => trim($motivo),
+            ]
+        );
+    }
+
+    /**
+     * Once a substitute is authorized, the nota it replaces is marked as replaced. Safe to call any
+     * number of times and for notas that are not substitutes.
+     */
+    public function concluirSubstituicao(NotaFiscal $nova): void
+    {
+        $chave = $nova->chaveSubstituida();
+
+        if ($chave === null || $nova->status !== NotaFiscal::STATUS_AUTORIZADA) {
+            return;
+        }
+
+        $original = NotaFiscal::query()
+            ->where('emitente_id', $nova->emitente_id)
+            ->where('chave_acesso', $chave)
+            ->where('status', NotaFiscal::STATUS_AUTORIZADA)
+            ->first();
+
+        $original?->update([
+            'status' => NotaFiscal::STATUS_CANCELADA,
+            'cancelada_em' => now(),
+            'cancelamento_motivo' => 'Substituída pela NFS-e '.($nova->numero_nfse ?? 'nº '.$nova->id).': '.($nova->payload['substituicao_motivo'] ?? ''),
+            'substituida_por_id' => $nova->id,
+        ]);
     }
 }

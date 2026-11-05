@@ -6,6 +6,7 @@ use App\Models\Module;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Spatie\Permission\Models\Permission;
 use Tightenco\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
@@ -38,14 +39,38 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $user,
-                'permissions' => $user ? $user->getAllPermissions()->pluck('name')->values()->all() : [],
+                'permissions' => $user ? $this->permissionsOf($user) : [],
                 'menu' => $user ? $this->buildMenu($user) : [],
+            ],
+            // One-shot messages set with ->with('success'|'error'|'warning'); the pages show them with SweetAlert2.
+            'flash' => fn () => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+                'warning' => $request->session()->get('warning'),
             ],
             'ziggy' => fn () => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
         ];
+    }
+
+    /**
+     * Permission names the front end uses to show or hide buttons.
+     *
+     * The Administrador passes every Gate check (Gate::before), so the buttons must agree: reading
+     * only the permissions linked to the role hid the actions of modules created after the role
+     * was last synced (e.g. "Novo tomador").
+     *
+     * @return array<int, string>
+     */
+    private function permissionsOf(User $user): array
+    {
+        $query = $user->hasRole('Administrador') ? Permission::query() : null;
+
+        return $query
+            ? $query->pluck('name')->values()->all()
+            : $user->getAllPermissions()->pluck('name')->values()->all();
     }
 
     /**

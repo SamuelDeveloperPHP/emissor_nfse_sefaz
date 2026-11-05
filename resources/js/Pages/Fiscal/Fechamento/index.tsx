@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Card, Col, Container, Form, Row } from "react-bootstrap";
-import { Head, router, usePage } from "@inertiajs/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Head, router } from "@inertiajs/react";
 import Layout from "../../../Layouts";
+import { useFlashAlert } from "../../../common/alerta";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import { Can } from "../../../common/usePermission";
 import { moeda } from "../Lotes/status";
@@ -24,12 +23,9 @@ const Numero = ({ rotulo, valor, destaque = false }: { rotulo: string; valor: Re
 const FechamentoIndex = (props: any) => {
   const emitentes = props.emitentes as { id: number; razao_social: string }[];
   const resumo = props.resumo as { autorizadas: number; canceladas: number; valor: number; iss_retido: number; tem_notas: boolean };
-  const { flash }: any = usePage().props;
   const [filtros, setFiltros] = useState<Filtros>(props.filtros);
 
-  useEffect(() => {
-    if (flash?.error) toast.error(flash.error, { autoClose: 5000 });
-  }, [flash]);
+  useFlashAlert();
 
   const aplicar = (novos: Filtros) => {
     setFiltros(novos);
@@ -106,7 +102,6 @@ const FechamentoIndex = (props: any) => {
           </Card>
         </Container>
       </div>
-      <ToastContainer closeButton={false} limit={1} />
     </Layout>
   );
 };

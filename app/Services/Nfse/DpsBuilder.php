@@ -18,6 +18,16 @@ class DpsBuilder
 {
     public const NAMESPACE = 'http://www.sped.fazenda.gov.br/nfse';
 
+    /** Justification codes the XSD accepts for replacing a nota (TSCodJustSubst). */
+    public const MOTIVOS_SUBSTITUICAO = [
+        '01' => 'Desenquadramento de NFS-e do Simples Nacional',
+        '02' => 'Enquadramento de NFS-e no Simples Nacional',
+        '03' => 'Inclusão retroativa de imunidade ou isenção',
+        '04' => 'Exclusão retroativa de imunidade ou isenção',
+        '05' => 'Rejeição de NFS-e pelo tomador ou intermediário',
+        '99' => 'Outros',
+    ];
+
     /**
      * @param  string|null  $ambiente  'homologacao' | 'producao'; defaults to the emitente's own
      */
@@ -61,6 +71,24 @@ class DpsBuilder
         $this->child($doc, $inf, 'dCompet', $payload['competencia'] ?? now()->toDateString());
         $this->child($doc, $inf, 'tpEmit', '1');
         $this->child($doc, $inf, 'cLocEmi', $municipioEmissor);
+
+        // A substitute DPS names the nota it replaces; the ADN then cancels that one by substitution.
+        if (filled($payload['substitui_chave'] ?? null)) {
+            if (! preg_match('/^\d{50}$/', (string) $payload['substitui_chave'])) {
+                throw new NfseException('A chave de acesso da NFS-e a substituir é inválida.');
+            }
+            if (! isset(self::MOTIVOS_SUBSTITUICAO[$payload['substituicao_motivo_codigo'] ?? ''])) {
+                throw new NfseException('Escolha um motivo de substituição válido.');
+            }
+            if (mb_strlen(trim((string) ($payload['substituicao_motivo'] ?? ''))) < 15) {
+                throw new NfseException('Explique o motivo da substituição com pelo menos 15 caracteres.');
+            }
+
+            $subst = $this->child($doc, $inf, 'subst');
+            $this->child($doc, $subst, 'chSubstda', $payload['substitui_chave']);
+            $this->child($doc, $subst, 'cMotivo', $payload['substituicao_motivo_codigo']);
+            $this->child($doc, $subst, 'xMotivo', trim($payload['substituicao_motivo']));
+        }
 
         $prest = $this->child($doc, $inf, 'prest');
         $this->child($doc, $prest, 'CNPJ', $cnpj);

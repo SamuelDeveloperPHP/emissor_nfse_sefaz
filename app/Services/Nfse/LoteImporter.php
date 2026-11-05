@@ -171,14 +171,17 @@ class LoteImporter
      *
      * @param  array<string, string>  $linha
      */
-    public function importarLinha(Emitente $emitente, ?User $user, array $linha, string $nome = 'Emissão individual', ?string $ambiente = null): Lote
+    public function importarLinha(Emitente $emitente, ?User $user, array $linha, string $nome = 'Emissão individual', ?string $ambiente = null, array $extrasDoPayload = []): Lote
     {
-        return $this->criarLote($emitente, $user, [1 => $linha], $nome, $ambiente);
+        return $this->criarLote($emitente, $user, [1 => $linha], $nome, $ambiente, $extrasDoPayload);
     }
 
-    private function criarLote(Emitente $emitente, ?User $user, array $linhas, string $nomeArquivo, ?string $ambiente = null): Lote
+    /**
+     * @param  array<string, mixed>  $extrasDoPayload  keys that are not CSV columns (e.g. the substitution data), added to every payload
+     */
+    private function criarLote(Emitente $emitente, ?User $user, array $linhas, string $nomeArquivo, ?string $ambiente = null, array $extrasDoPayload = []): Lote
     {
-        return DB::transaction(function () use ($emitente, $user, $linhas, $nomeArquivo, $ambiente) {
+        return DB::transaction(function () use ($emitente, $user, $linhas, $nomeArquivo, $ambiente, $extrasDoPayload) {
             $lote = Lote::create([
                 'emitente_id' => $emitente->id,
                 'user_id' => $user?->id,
@@ -200,7 +203,7 @@ class LoteImporter
                     'status' => $erros ? NotaFiscal::STATUS_REJEITADA : NotaFiscal::STATUS_PENDENTE,
                     'valor_servicos' => $payload['valor'] ?? 0,
                     'motivo_rejeicao' => $erros[0] ?? null,
-                    'payload' => json_encode($payload),
+                    'payload' => json_encode([...$payload, ...$extrasDoPayload]),
                     'erros' => $erros ? json_encode($erros) : null,
                     'created_at' => $agora,
                     'updated_at' => $agora,

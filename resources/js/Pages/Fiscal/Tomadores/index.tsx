@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Button, Card, Col, Container, Form, Modal, Row, Table } from "react-bootstrap";
-import { Head, router, useForm, usePage } from "@inertiajs/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Head, router, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import { Can } from "../../../common/usePermission";
+import { avisarCamposInvalidos, confirmarExclusao, useFlashAlert } from "../../../common/alerta";
 
 interface TomadorRow {
   id: number;
@@ -44,18 +43,13 @@ export const formatarDocumento = (doc: string) =>
 const TomadoresIndex = (props: any) => {
   const tomadores = props.tomadores as TomadorRow[];
   const emitentes = props.emitentes as { id: number; razao_social: string }[];
-  const { flash }: any = usePage().props;
 
   const [aberto, setAberto] = useState(false);
-  const [excluir, setExcluir] = useState<TomadorRow | null>(null);
   const [busca, setBusca] = useState("");
 
   const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm(vazio);
 
-  useEffect(() => {
-    if (flash?.success) toast.success(flash.success, { autoClose: 3000 });
-    if (flash?.error) toast.error(flash.error, { autoClose: 4000 });
-  }, [flash]);
+  useFlashAlert();
 
   const novo = () => {
     reset();
@@ -81,9 +75,14 @@ const TomadoresIndex = (props: any) => {
     setAberto(true);
   };
 
+  const excluirItem = async (t: TomadorRow) => {
+    if (!(await confirmarExclusao("Excluir tomador?", `${t.nome} será removido do cadastro. As notas já emitidas não mudam.`))) return;
+    router.delete(route("tomadores.destroy", t.id), { preserveScroll: true });
+  };
+
   const salvar = (e: React.FormEvent) => {
     e.preventDefault();
-    const opcoes = { onSuccess: () => setAberto(false) };
+    const opcoes = { onSuccess: () => setAberto(false), onError: avisarCamposInvalidos, preserveScroll: true };
     if (data.id) put(route("tomadores.update", data.id), opcoes);
     else post(route("tomadores.store"), opcoes);
   };
@@ -154,7 +153,7 @@ const TomadoresIndex = (props: any) => {
                             </Button>
                           </Can>
                           <Can permission="tomadores.delete">
-                            <Button size="sm" variant="outline-danger" onClick={() => setExcluir(t)}>
+                            <Button size="sm" variant="outline-danger" onClick={() => excluirItem(t)}>
                               Excluir
                             </Button>
                           </Can>
@@ -213,27 +212,6 @@ const TomadoresIndex = (props: any) => {
         </Form>
       </Modal>
 
-      <Modal show={!!excluir} onHide={() => setExcluir(null)} centered>
-        <Modal.Body className="py-4 px-4">
-          <h5>Excluir tomador?</h5>
-          <p className="text-muted mb-0">{excluir?.nome} será removido do cadastro. As notas já emitidas não mudam.</p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="light" onClick={() => setExcluir(null)}>
-            Voltar
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => {
-              if (excluir) router.delete(route("tomadores.destroy", excluir.id), { preserveScroll: true });
-              setExcluir(null);
-            }}
-          >
-            Excluir
-          </Button>
-        </Modal.Footer>
-      </Modal>
-      <ToastContainer closeButton={false} limit={1} />
     </Layout>
   );
 };

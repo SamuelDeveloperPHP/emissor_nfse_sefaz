@@ -35,6 +35,7 @@ class NotaFiscal extends Model
         'cancelada_em',
         'cancelamento_motivo',
         'cancelamento_xml',
+        'substituida_por_id',
         'consultada_em',
         'email_enviado_em',
         'email_enviado_para',
@@ -64,5 +65,17 @@ class NotaFiscal extends Model
     public function emitente(): BelongsTo
     {
         return $this->belongsTo(Emitente::class);
+    }
+
+    /** The nota that replaced this one (only set on a nota that was substituted). */
+    public function substituidaPor(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'substituida_por_id');
+    }
+
+    /** Access key of the nota this one replaces, when it is a substitute. */
+    public function chaveSubstituida(): ?string
+    {
+        return $this->payload['substitui_chave'] ?? null;
     }
 }

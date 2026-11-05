@@ -6,8 +6,9 @@ Sistema para escritórios de contabilidade emitirem notas fiscais de serviço (N
 
 ## O que o sistema faz
 
-- **Emitentes:** cadastro de CNPJs com regime tributário, município (código IBGE), certificado A1 e driver de transmissão por emitente.
-- **Notas fiscais:** lista com filtros (emitente, situação, período, tomador/número/chave), detalhe, download do XML da NFS-e e da DPS, DANFSE em PDF, consulta de notas pendentes (também automática a cada 5 minutos) e cancelamento por evento assinado.
+- **Emitentes:** cadastro de CNPJs com regime tributário, município (código IBGE) e driver de transmissão por emitente.
+- **Certificados digitais (A1):** o Administrador envia o .pfx e a senha de cada emitente em Administração > Configurações. O sistema abre o certificado na hora e só guarda se a senha estiver certa, se estiver na validade e se for do mesmo CNPJ (matriz e filial valem). O arquivo e a senha ficam criptografados com a `APP_KEY`; não voltam para a tela, para os logs nem para downloads; cada envio e remoção é registrado com usuário e data. **Faça backup da `APP_KEY`**: sem ela os certificados guardados não abrem e precisam ser enviados de novo.
+- **Notas fiscais:** lista com filtros (emitente, situação, período, tomador/número/chave), detalhe, download do XML da NFS-e e da DPS, DANFSE em PDF, consulta de notas pendentes (também automática a cada 5 minutos, com botão "Consultar agora") cancelamento por evento assinado e **substituição** (emite a nota corrigida com o grupo `subst` da DPS; a anterior só sai de circulação quando a nova é autorizada).
 - **IBS e CBS (reforma tributária):** grupo opcional da DPS, preenchido por serviço, no CSV (colunas `ibscbs_*`) ou na emissão avulsa; só vai na nota com os três códigos.
 - **Tomadores e serviços:** cadastro por emitente (CPF/CNPJ, endereço, descrição, código de tributação e alíquota prontos), usado na emissão avulsa e nas recorrências.
 - **Notas recorrentes:** mensalidades emitidas sozinhas todo mês, no dia escolhido (1 a 28), às 6h; pausa e retomada; nunca emite duas vezes o mesmo mês.
@@ -68,7 +69,6 @@ A NFS-e é do padrão **federal** (SEFIN Nacional / ADN). O ISSQN continua sendo
 
 - Validar a transmissão em produção restrita (endpoints, corpo da requisição, resposta, algoritmo da assinatura).
 - Confirmar em produção restrita a consulta (`/dps/{id}`), o cancelamento por evento e o DANFSE, que seguem o contrato público e não foram testados no ADN real.
-- Substituição de NFS-e (evento 105102).
 - Grupo IBS/CBS: o sistema envia o que for informado (indicador de operação, CST e classificação tributária), mas não conhece as tabelas oficiais de códigos nem as regras de quando é obrigatório; o ADN decide. Preencher no cadastro de serviços ou no CSV.
 - E-mail ao tomador depende de SMTP configurado no `.env`; com `MAIL_MAILER=log` nada é enviado.
 

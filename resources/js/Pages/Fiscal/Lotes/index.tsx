@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Alert, Button, Card, Col, Container, Form, Row, Table } from "react-bootstrap";
-import { Head, Link, router, useForm, usePage } from "@inertiajs/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Head, Link, router, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
+import { useFlashAlert } from "../../../common/alerta";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import { Can } from "../../../common/usePermission";
 import { LoteBadge, NotaStatus, PorStatus, moeda } from "./status";
@@ -33,7 +32,6 @@ const LotesIndex = (props: any) => {
   const lotes = props.lotes as LoteRow[];
   const emitentes = props.emitentes as EmitenteOption[];
   const permiteAmbiente = !!props.permite_escolher_ambiente;
-  const { flash }: any = usePage().props;
 
   const { data, setData, post, processing, errors, reset } = useForm({
     emitente_id: "",
@@ -41,10 +39,7 @@ const LotesIndex = (props: any) => {
     arquivo: null as File | null,
   });
 
-  useEffect(() => {
-    if (flash?.success) toast.success(flash.success, { autoClose: 3000 });
-    if (flash?.error) toast.error(flash.error, { autoClose: 3000 });
-  }, [flash]);
+  useFlashAlert();
 
   const temProcessando = lotes.some((lote) => lote.status === "processando");
   useEffect(() => {
@@ -270,7 +265,6 @@ const LotesIndex = (props: any) => {
           </Card>
         </Container>
       </div>
-      <ToastContainer closeButton={false} limit={1} />
     </Layout>
   );
 };

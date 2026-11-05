@@ -60,6 +60,10 @@ O agendador do sistema cuida de três coisas: processar a fila de lotes e os e-m
 
 Para enviar a nota ao tomador, preencha no `.env` os dados SMTP de uma caixa do seu domínio (veja o bloco comentado em `.env.production.example`) e rode `php artisan config:cache`. Sem isso o envio fica registrado apenas no log.
 
+## Certificados e a APP_KEY
+
+Os certificados A1 ficam em `storage/app/certificados/`, criptografados com a `APP_KEY` do `.env`. Guarde uma cópia da `APP_KEY` em local seguro e **nunca a troque** depois de enviar certificados: sem a chave original eles não abrem e precisam ser enviados de novo. A pasta `storage/` fica fora da pasta pública do site; confira que o domínio aponta só para `public/`.
+
 ## 8. Conferir
 
 - `https://nfse.seudominio.com.br` abre a tela de login (com cadeado).
@@ -68,7 +72,7 @@ Para enviar a nota ao tomador, preencha no `.env` os dados SMTP de uma caixa do 
 
 ## Antes de emitir de verdade
 
-O driver **ADN Nacional** assina a DPS com o certificado A1 e transmite ao SEFIN Nacional, mas o contrato da API ainda não foi confirmado contra o ADN real. Antes de qualquer uso fiscal: cadastre um emitente com certificado A1 válido, deixe-o em **Homologação** (produção restrita), emita um lote pequeno e confira se o ADN aceita a nota, o XML e o cancelamento. Se o ADN recusar a assinatura, teste `NFSE_ASSINATURA_ALGORITMO=sha256` no `.env`. O driver **Simulador local** não emite nada de verdade.
+O driver **ADN Nacional** assina a DPS com o certificado A1 e transmite ao SEFIN Nacional, mas o contrato da API ainda não foi confirmado contra o ADN real. Antes de qualquer uso fiscal: cadastre o emitente, envie o certificado A1 dele em **Administração > Configurações > Certificados digitais** (o botão *Testar* confirma que a senha abre o arquivo), deixe-o em **Homologação** (produção restrita), emita um lote pequeno e confira se o ADN aceita a nota, o XML e o cancelamento. Se o ADN recusar a assinatura, teste `NFSE_ASSINATURA_ALGORITMO=sha256` no `.env`. O driver **Simulador local** não emite nada de verdade.
 
 ## Atualizar depois
 
@@ -76,6 +80,11 @@ Gere um novo pacote, envie e extraia por cima (preserve o `.env` e `storage/`), 
 
 ```bash
 php artisan migrate --force
+php artisan db:seed --class=ModulesSeeder --force
+php artisan modules:sync-permissions
+php artisan nfse:proteger-certificados
 php artisan config:cache
 php artisan route:cache
 ```
+
+`nfse:proteger-certificados` criptografa certificados guardados por versões antigas (só é necessário uma vez).

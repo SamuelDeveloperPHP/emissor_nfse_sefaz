@@ -9,6 +9,7 @@ use App\Services\Nfse\Drivers\DriverManager;
 use App\Services\Nfse\CertificadoA1;
 use App\Services\Nfse\DpsBuilder;
 use App\Services\Nfse\NfseException;
+use App\Services\Nfse\NotaOperacoes;
 use App\Services\Nfse\XmlSigner;
 use App\Services\Nfse\XsdValidator;
 use Illuminate\Bus\Queueable;
@@ -31,7 +32,7 @@ class ProcessarLoteJob implements ShouldQueue
     {
     }
 
-    public function handle(DpsBuilder $builder, XsdValidator $validator, DriverManager $drivers, XmlSigner $signer): void
+    public function handle(DpsBuilder $builder, XsdValidator $validator, DriverManager $drivers, XmlSigner $signer, NotaOperacoes $operacoes): void
     {
         $emitente = $this->lote->emitente;
         $driver = $drivers->for($emitente);
@@ -58,10 +59,10 @@ class ProcessarLoteJob implements ShouldQueue
             ->where('status', NotaFiscal::STATUS_PENDENTE)
             ->whereNull('dps_xml')
             ->orderBy('linha')
-            ->chunkById(200, function ($notas) use ($emitente, $builder, $validator, $driver, $signer, $certificado) {
+            ->chunkById(200, function ($notas) use ($emitente, $builder, $validator, $driver, $signer, $certificado, $operacoes) {
                 foreach ($notas as $nota) {
                     try {
-                        $this->processar($nota, $emitente, $builder, $validator, $driver, $signer, $certificado);
+                        $this->processar($nota, $emitente, $builder, $validator, $driver, $signer, $certificado, $operacoes);
                     } catch (Throwable $e) {
                         report($e);
                         $this->rejeitar($nota, ['Falha inesperada ao processar esta linha: '.$e->getMessage()]);
@@ -72,7 +73,7 @@ class ProcessarLoteJob implements ShouldQueue
         $this->finalizar();
     }
 
-    private function processar(NotaFiscal $nota, Emitente $emitente, DpsBuilder $builder, XsdValidator $validator, $driver, XmlSigner $signer, ?CertificadoA1 $certificado): void
+    private function processar(NotaFiscal $nota, Emitente $emitente, DpsBuilder $builder, XsdValidator $validator, $driver, XmlSigner $signer, ?CertificadoA1 $certificado, NotaOperacoes $operacoes): void
     {
         $numero = DB::transaction(function () use ($emitente) {
             $atual = Emitente::query()->whereKey($emitente->id)->lockForUpdate()->firstOrFail();
@@ -124,6 +125,9 @@ class ProcessarLoteJob implements ShouldQueue
             'nfse_xml' => $resultado['nfse_xml'] ?? null,
             'resposta' => $resultado['resposta'] ?? null,
         ]);
+
+        // A substitute that got authorized retires the nota it replaces.
+        $operacoes->concluirSubstituicao($nota);
     }
 
     private function rejeitar(NotaFiscal $nota, array $erros, ?int $numero = null, ?string $xml = null): void
