@@ -237,7 +237,7 @@ class NotasFiscaisTest extends TestCase
         $this->actingAs($this->admin())->post(route('notas.cancelar', $nota), [
             'motivo_codigo' => '2',
             'motivo' => 'Serviço não foi prestado ao tomador',
-        ])->assertSessionHasErrors(['cancelamento' => 'E0420: Prazo de cancelamento excedido']);
+        ])->assertSessionHas('error', 'E0420: Prazo de cancelamento excedido');
 
         $this->assertSame(NotaFiscal::STATUS_AUTORIZADA, $nota->fresh()->status);
     }
@@ -257,7 +257,7 @@ class NotasFiscaisTest extends TestCase
             ->assertSessionHasErrors('motivo_codigo');
 
         $this->post(route('notas.cancelar', $pendente), ['motivo_codigo' => '1', 'motivo' => 'Motivo com mais de quinze letras'])
-            ->assertSessionHasErrors('cancelamento');
+            ->assertSessionHas('error');
 
         Http::assertNothingSent();
 
@@ -345,7 +345,7 @@ class NotasFiscaisTest extends TestCase
         $semXml = $this->nota($this->emitente(), 'autorizada', ['nfse_xml' => null, 'chave_acesso' => str_repeat('3', 50)]);
 
         foreach ([$simulada, $pendente, $semXml] as $nota) {
-            $this->post(route('notas.email', $nota), ['email' => 'cliente@exemplo.com.br'])->assertSessionHasErrors('email');
+            $this->post(route('notas.email', $nota), ['email' => 'cliente@exemplo.com.br'])->assertSessionHas('error');
         }
 
         $this->post(route('notas.email', $semXml), ['email' => 'isso-nao-e-email'])->assertSessionHasErrors('email');

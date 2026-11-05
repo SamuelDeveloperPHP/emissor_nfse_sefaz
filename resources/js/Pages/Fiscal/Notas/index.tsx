@@ -1,8 +1,9 @@
 import React from "react";
-import { Button, Card, Col, Container, Form, Row, Table } from "react-bootstrap";
+import { Alert, Button, Card, Col, Container, Form, Row, Table } from "react-bootstrap";
 import { Head, Link, router } from "@inertiajs/react";
 import Layout from "../../../Layouts";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
+import { falhaAoConsultar, useFlashAlert } from "../../../common/alerta";
 import { NotaBadge, NotaStatus, moeda } from "../Lotes/status";
 import { nomeDoAmbiente } from "../Lotes/AmbienteField";
 
@@ -16,6 +17,8 @@ interface NotaRow {
   valor: string;
   ambiente: string | null;
   simulada: boolean;
+  substituida: boolean;
+  substituta: boolean;
   data: string;
 }
 
@@ -41,6 +44,13 @@ const STATUS_OPCOES = [
 const NotasIndex = (props: any) => {
   const notas = props.notas as Paginated<NotaRow>;
   const emitentes = props.emitentes as { id: number; razao_social: string }[];
+  const pendentes = (props.pendentes ?? 0) as number;
+  const [consultando, setConsultando] = React.useState(false);
+
+  useFlashAlert();
+
+  const consultarPendentes = () =>
+    router.post(route("notas.consultar-pendentes"), {}, { preserveScroll: true, onStart: () => setConsultando(true), onFinish: () => setConsultando(false), onError: falhaAoConsultar });
   const [filtros, setFiltros] = React.useState<Filtros>({
     emitente_id: props.filtros?.emitente_id ?? "",
     status: props.filtros?.status ?? "",
@@ -68,6 +78,20 @@ const NotasIndex = (props: any) => {
       <div className="page-content">
         <Container fluid>
           <BreadCrumb title="Notas fiscais" pageTitle="Fiscal" />
+
+          {pendentes > 0 && (
+            <Alert variant="warning" className="d-flex flex-wrap align-items-center gap-3">
+              <div className="flex-grow-1">
+                <strong>
+                  {pendentes} {pendentes === 1 ? "nota está pendente" : "notas estão pendentes"}.
+                </strong>{" "}
+                O sistema consulta o ADN a cada 5 minutos e atualiza a situação sozinho. Não emita de novo a mesma nota: reenviar pode duplicar.
+              </div>
+              <Button variant="warning" onClick={consultarPendentes} disabled={consultando}>
+                {consultando ? "Consultando..." : "Consultar agora"}
+              </Button>
+            </Alert>
+          )}
 
           <Card>
             <Card.Body>
@@ -155,6 +179,8 @@ const NotasIndex = (props: any) => {
                         <td className="text-end">{moeda(nota.valor)}</td>
                         <td>
                           <NotaBadge status={nota.status} />
+                          {nota.substituida && <div className="text-muted small">Substituída</div>}
+                          {nota.substituta && <div className="text-muted small">Substitui outra nota</div>}
                         </td>
                       </tr>
                     ))}

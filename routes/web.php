@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CertificadoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmitenteController;
 use App\Http\Controllers\FechamentoController;
@@ -64,6 +65,9 @@ Route::middleware('auth')->group(function () {
     Route::get('notas/{nota}/danfse', [NotaFiscalController::class, 'danfse'])->middleware('permission:notas-fiscais.view')->name('notas.danfse');
     Route::post('notas/{nota}/consultar', [NotaFiscalController::class, 'consultar'])->middleware('permission:notas-fiscais.view')->name('notas.consultar');
     Route::post('notas/{nota}/enviar-email', [NotaFiscalController::class, 'enviarEmail'])->middleware('permission:notas-fiscais.enviar')->name('notas.email');
+    Route::post('notas/consultar-pendentes', [NotaFiscalController::class, 'consultarPendentes'])->middleware('permission:notas-fiscais.view')->name('notas.consultar-pendentes');
+    Route::get('notas/{nota}/substituir', [NotaFiscalController::class, 'substituir'])->middleware('permission:notas-fiscais.substituir')->name('notas.substituir');
+    Route::post('notas/{nota}/substituir', [NotaFiscalController::class, 'substituirStore'])->middleware('permission:notas-fiscais.substituir')->name('notas.substituir.store');
     Route::post('notas/{nota}/cancelar', [NotaFiscalController::class, 'cancelar'])->middleware('permission:notas-fiscais.cancelar')->name('notas.cancelar');
 
     Route::get('tomadores', [TomadorController::class, 'index'])->middleware('permission:tomadores.view')->name('tomadores.index');
@@ -86,6 +90,12 @@ Route::middleware('auth')->group(function () {
     // System-wide settings: only the Administrador role, whatever the permission matrix says.
     Route::get('configuracoes', [SettingController::class, 'index'])->middleware('role:Administrador')->name('configuracoes.index');
     Route::post('configuracoes', [SettingController::class, 'update'])->middleware('role:Administrador')->name('configuracoes.update');
+    // A1 certificates: throttled because the upload checks a password.
+    Route::middleware(['role:Administrador', 'throttle:20,1'])->prefix('configuracoes/certificados')->name('certificados.')->group(function () {
+        Route::post('{emitente}', [CertificadoController::class, 'store'])->name('store');
+        Route::post('{emitente}/testar', [CertificadoController::class, 'testar'])->name('testar');
+        Route::delete('{emitente}', [CertificadoController::class, 'destroy'])->name('destroy');
+    });
 
     // orders crud
     Route::get("/apps-ecommerce-orders", [OrderController::class, 'index'])->name('order-list');

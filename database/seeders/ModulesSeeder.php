@@ -101,7 +101,7 @@ class ModulesSeeder extends Seeder
             'parent_id' => $fiscal->id,
             'order' => 14,
             'is_active' => true,
-            'actions' => ['cancelar', 'enviar'],
+            'actions' => ['cancelar', 'enviar', 'substituir'],
         ]);
 
         Module::updateOrCreate(['key' => 'tomadores'], [

@@ -164,28 +164,7 @@ class LoteController extends Controller
 
     public function emitirStore(Request $request, LoteImporter $importer)
     {
-        $dados = $request->validate([
-            'ambiente' => ['nullable', Rule::in(['homologacao', 'producao'])],
-            'emitente_id' => ['required', 'integer', 'exists:emitentes,id'],
-            'tomador_documento' => ['required', 'string', 'max:20'],
-            'tomador_nome' => ['required', 'string', 'max:300'],
-            'tomador_email' => ['nullable', 'email', 'max:80'],
-            'ibscbs_codigo_operacao' => ['nullable', 'string', 'max:10'],
-            'ibscbs_cst' => ['nullable', 'string', 'max:10'],
-            'ibscbs_classificacao' => ['nullable', 'string', 'max:10'],
-            'tomador_cep' => ['nullable', 'string', 'max:10'],
-            'tomador_logradouro' => ['nullable', 'string', 'max:255'],
-            'tomador_numero' => ['nullable', 'string', 'max:60'],
-            'tomador_complemento' => ['nullable', 'string', 'max:156'],
-            'tomador_bairro' => ['nullable', 'string', 'max:60'],
-            'tomador_codigo_municipio' => ['nullable', 'string', 'max:10'],
-            'descricao_servico' => ['required', 'string', 'max:2000'],
-            'codigo_tributacao_nacional' => ['required', 'string', 'max:10'],
-            'valor_servico' => ['required', 'string', 'max:20'],
-            'aliquota_iss' => ['nullable', 'string', 'max:10'],
-            'iss_retido' => ['boolean'],
-            'data_competencia' => ['nullable', 'string', 'max:10'],
-        ]);
+        $dados = $request->validate(self::regrasDaNota());
 
         $emitente = Emitente::findOrFail($dados['emitente_id']);
 
@@ -207,7 +186,14 @@ class LoteController extends Controller
 
         $lote = $importer->importarLinha($emitente, $request->user(), $linha, ambiente: $this->ambienteDoLote($request));
 
-        ProcessarLoteJob::dispatchSync($lote);
+        try {
+            ProcessarLoteJob::dispatchSync($lote);
+        } catch (\Throwable $e) {
+            // The lote is saved and its notas stay pending: the user lands on it instead of on an error page.
+            report($e);
+
+            return redirect()->route('lotes.show', $lote)->with('error', 'A nota foi recebida, mas o processamento falhou. Veja a situação abaixo e tente consultar de novo.');
+        }
 
         $lote->refresh();
 
@@ -219,6 +205,37 @@ class LoteController extends Controller
                 default => 'A nota foi rejeitada; veja os motivos abaixo.',
             }
         );
+    }
+
+    /**
+     * Validation of one nota typed on a form (single emission and substitution share it).
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    public static function regrasDaNota(): array
+    {
+        return [
+            'ambiente' => ['nullable', Rule::in(['homologacao', 'producao'])],
+            'emitente_id' => ['required', 'integer', 'exists:emitentes,id'],
+            'tomador_documento' => ['required', 'string', 'max:20'],
+            'tomador_nome' => ['required', 'string', 'max:300'],
+            'tomador_email' => ['nullable', 'email', 'max:80'],
+            'ibscbs_codigo_operacao' => ['nullable', 'string', 'max:10'],
+            'ibscbs_cst' => ['nullable', 'string', 'max:10'],
+            'ibscbs_classificacao' => ['nullable', 'string', 'max:10'],
+            'tomador_cep' => ['nullable', 'string', 'max:10'],
+            'tomador_logradouro' => ['nullable', 'string', 'max:255'],
+            'tomador_numero' => ['nullable', 'string', 'max:60'],
+            'tomador_complemento' => ['nullable', 'string', 'max:156'],
+            'tomador_bairro' => ['nullable', 'string', 'max:60'],
+            'tomador_codigo_municipio' => ['nullable', 'string', 'max:10'],
+            'descricao_servico' => ['required', 'string', 'max:2000'],
+            'codigo_tributacao_nacional' => ['required', 'string', 'max:10'],
+            'valor_servico' => ['required', 'string', 'max:20'],
+            'aliquota_iss' => ['nullable', 'string', 'max:10'],
+            'iss_retido' => ['boolean'],
+            'data_competencia' => ['nullable', 'string', 'max:10'],
+        ];
     }
 
     public function modelo()
