@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmitenteController;
+use App\Http\Controllers\FechamentoController;
 use App\Http\Controllers\LoteController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\NotaFiscalController;
@@ -79,6 +80,9 @@ Route::middleware('auth')->group(function () {
     Route::put('recorrencias/{recorrencia}', [RecorrenciaController::class, 'update'])->middleware('permission:recorrencias.edit')->name('recorrencias.update');
     Route::delete('recorrencias/{recorrencia}', [RecorrenciaController::class, 'destroy'])->middleware('permission:recorrencias.delete')->name('recorrencias.destroy');
 
+    Route::get('fechamento', [FechamentoController::class, 'index'])->middleware('permission:fechamento.view')->name('fechamento.index');
+    Route::get('fechamento/excel', [FechamentoController::class, 'excel'])->middleware('permission:fechamento.exportar')->name('fechamento.excel');
+    Route::get('fechamento/zip', [FechamentoController::class, 'zip'])->middleware('permission:fechamento.exportar')->name('fechamento.zip');
     // System-wide settings: only the Administrador role, whatever the permission matrix says.
     Route::get('configuracoes', [SettingController::class, 'index'])->middleware('role:Administrador')->name('configuracoes.index');
     Route::post('configuracoes', [SettingController::class, 'update'])->middleware('role:Administrador')->name('configuracoes.update');

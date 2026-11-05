@@ -8,6 +8,11 @@ Sistema para escritórios de contabilidade emitirem notas fiscais de serviço (N
 
 - **Emitentes:** cadastro de CNPJs com regime tributário, município (código IBGE), certificado A1 e driver de transmissão por emitente.
 - **Notas fiscais:** lista com filtros (emitente, situação, período, tomador/número/chave), detalhe, download do XML da NFS-e e da DPS, DANFSE em PDF, consulta de notas pendentes (também automática a cada 5 minutos) e cancelamento por evento assinado.
+- **Tomadores e serviços:** cadastro por emitente (CPF/CNPJ, endereço, descrição, código de tributação e alíquota prontos), usado na emissão avulsa e nas recorrências.
+- **Notas recorrentes:** mensalidades emitidas sozinhas todo mês, no dia escolhido (1 a 28), às 6h; pausa e retomada; nunca emite duas vezes o mesmo mês.
+- **E-mail ao tomador:** envia a nota autorizada com o XML (e o DANFSE em PDF, quando o ADN fornece).
+- **Fechamento do mês:** planilha Excel (notas, totais por tomador e por emitente, ISS retido) e ZIP com os XMLs do mês.
+- **Lotes por CSV:** botão *Conferir* mostra, linha a linha, o que será aceito antes de enviar; as linhas rejeitadas voltam em um CSV pronto para corrigir e reenviar.
 - **NFS-e avulsa:** formulário para emitir uma nota.
 - **Lotes:** envio de planilha CSV (até 5.000 linhas), processamento em fila e acompanhamento do andamento.
 - **Ambiente de emissão:** por padrão toda emissão sai em **homologação**. O Administrador pode liberar, em Administração > Configurações, a escolha entre homologação e produção a cada lote ou nota; vale para o sistema inteiro.
@@ -64,7 +69,8 @@ A NFS-e é do padrão **federal** (SEFIN Nacional / ADN). O ISSQN continua sendo
 - Confirmar em produção restrita a consulta (`/dps/{id}`), o cancelamento por evento e o DANFSE, que seguem o contrato público e não foram testados no ADN real.
 - Substituição de NFS-e (evento 105102).
 - Grupo IBS/CBS.
-- Cadastros de tomadores e serviços, notas recorrentes, e-mail ao tomador e exportação do fechamento.
+- Grupo IBS/CBS ainda não existe na DPS.
+- E-mail ao tomador depende de SMTP configurado no `.env`; com `MAIL_MAILER=log` nada é enviado.
 
 ## Colocar em produção (hospedagem compartilhada)
 

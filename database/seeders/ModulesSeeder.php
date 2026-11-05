@@ -128,6 +128,15 @@ class ModulesSeeder extends Seeder
             'order' => 18,
         ]);
 
+        Module::updateOrCreate(['key' => 'fechamento'], [
+            'name' => 'Fechamento do mês',
+            'icon' => 'bx bx-package',
+            'route' => 'fechamento.index',
+            'parent_id' => $fiscal->id,
+            'order' => 19,
+            'actions' => ['exportar'],
+        ]);
+
         Module::updateOrCreate(['key' => 'monitoramento'], [
             'name' => 'Monitoramento',
             'icon' => 'bx bx-pulse',
