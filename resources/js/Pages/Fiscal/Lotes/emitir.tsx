@@ -3,21 +3,25 @@ import { Alert, Button, Card, Col, Container, Form, Row } from "react-bootstrap"
 import { Head, Link, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
+import { AmbienteField } from "./AmbienteField";
 
 interface EmitenteOption {
   id: number;
   razao_social: string;
   cnpj: string;
   driver: string;
+  ambiente: string;
 }
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 
 const Emitir = (props: any) => {
   const emitentes = props.emitentes as EmitenteOption[];
+  const permiteAmbiente = !!props.permite_escolher_ambiente;
 
   const { data, setData, post, processing, errors } = useForm({
     emitente_id: "",
+    ambiente: "",
     tomador_documento: "",
     tomador_nome: "",
     tomador_email: "",
@@ -59,11 +63,14 @@ const Emitir = (props: any) => {
                 )}
 
                 <Row className="g-3">
-                  <Col md={12}>
+                  <Col md={permiteAmbiente ? 8 : 12}>
                     <Form.Label>Emitente</Form.Label>
                     <Form.Select
                       value={data.emitente_id}
-                      onChange={(e) => setData("emitente_id", e.target.value)}
+                      onChange={(e) => {
+                        const escolhido = emitentes.find((item) => String(item.id) === e.target.value);
+                        setData((atual) => ({ ...atual, emitente_id: e.target.value, ambiente: escolhido?.ambiente ?? "" }));
+                      }}
                       isInvalid={!!errors.emitente_id}
                     >
                       <option value="">Selecione o emitente</option>
@@ -80,6 +87,15 @@ const Emitir = (props: any) => {
                       </Form.Text>
                     )}
                   </Col>
+                  {permiteAmbiente && (
+                    <Col md={4}>
+                      <AmbienteField
+                        value={data.ambiente || "homologacao"}
+                        onChange={(valor) => setData("ambiente", valor)}
+                        error={errors.ambiente}
+                      />
+                    </Col>
+                  )}
 
                   <Col md={4}>
                     <Form.Label>CPF ou CNPJ do tomador</Form.Label>

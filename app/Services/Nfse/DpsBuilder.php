@@ -18,8 +18,13 @@ class DpsBuilder
 {
     public const NAMESPACE = 'http://www.sped.fazenda.gov.br/nfse';
 
-    public function build(Emitente $emitente, array $payload, int $numeroDps): string
+    /**
+     * @param  string|null  $ambiente  'homologacao' | 'producao'; defaults to the emitente's own
+     */
+    public function build(Emitente $emitente, array $payload, int $numeroDps, ?string $ambiente = null): string
     {
+        $ambiente ??= $emitente->ambiente;
+
         $cnpj = preg_replace('/\D/', '', (string) $emitente->cnpj);
         $municipioEmissor = preg_replace('/\D/', '', (string) $emitente->codigo_municipio);
 
@@ -48,7 +53,7 @@ class DpsBuilder
         $inf = $this->child($doc, $dps, 'infDPS');
         $inf->setAttribute('Id', sprintf('DPS%s1%s%s%015d', $municipioEmissor, $cnpj, $serie, $numeroDps));
 
-        $this->child($doc, $inf, 'tpAmb', $emitente->ambiente === 'producao' ? '1' : '2');
+        $this->child($doc, $inf, 'tpAmb', $ambiente === 'producao' ? '1' : '2');
         $this->child($doc, $inf, 'dhEmi', now()->format('Y-m-d\TH:i:sP'));
         $this->child($doc, $inf, 'verAplic', config('nfse.ver_aplic'));
         $this->child($doc, $inf, 'serie', $serie);

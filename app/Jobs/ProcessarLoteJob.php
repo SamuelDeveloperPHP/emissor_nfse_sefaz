@@ -62,7 +62,7 @@ class ProcessarLoteJob implements ShouldQueue
         });
 
         try {
-            $xml = $builder->build($emitente, $nota->payload ?? [], $numero);
+            $xml = $builder->build($emitente, $nota->payload ?? [], $numero, $this->lote->ambiente);
         } catch (NfseException $e) {
             $this->rejeitar($nota, [$e->getMessage()], $numero);
 

@@ -53,6 +53,14 @@ class ModulesSeeder extends Seeder
             'order' => 93,
         ]);
 
+        Module::updateOrCreate(['key' => 'configuracoes'], [
+            'name' => 'Configurações',
+            'icon' => 'bx bx-slider-alt',
+            'route' => 'configuracoes.index',
+            'parent_id' => $administracao->id,
+            'order' => 94,
+        ]);
+
         $fiscal = Module::updateOrCreate(['key' => 'fiscal'], [
             'name' => 'Fiscal',
             'icon' => 'bx bx-receipt',

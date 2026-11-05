@@ -7,6 +7,7 @@ use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VelzonRoutesController;
 use Illuminate\Support\Facades\Route;
@@ -49,6 +50,10 @@ Route::middleware('auth')->group(function () {
     Route::post('lotes/emitir', [LoteController::class, 'emitirStore'])->middleware('permission:nfse-avulsa.create')->name('lotes.emitir.store');
     Route::post('lotes', [LoteController::class, 'store'])->middleware('permission:lotes-emissao.create')->name('lotes.store');
     Route::get('lotes/{lote}', [LoteController::class, 'show'])->middleware('permission:lotes-emissao.view')->name('lotes.show');
+
+    // System-wide settings: only the Administrador role, whatever the permission matrix says.
+    Route::get('configuracoes', [SettingController::class, 'index'])->middleware('role:Administrador')->name('configuracoes.index');
+    Route::post('configuracoes', [SettingController::class, 'update'])->middleware('role:Administrador')->name('configuracoes.update');
 
     // orders crud
     Route::get("/apps-ecommerce-orders", [OrderController::class, 'index'])->name('order-list');
@@ -216,7 +221,6 @@ Route::middleware('auth')->group(function () {
         Route::get("/pages-blog-grid", "pages_blog_grid");
         Route::get("/pages-blog-overview", "pages_blog_overview");
         Route::get("/forgot-password", "forgot_password");
-        Route::get("/register", "register");
         Route::get("/auth-signin-basic", "auth_signin_basic");
         Route::get("/auth-signin-cover", "auth_signin_cover");
         Route::get("/auth-signup-basic", "auth_signup_basic");

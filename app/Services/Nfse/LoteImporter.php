@@ -38,7 +38,7 @@ class LoteImporter
      * Reads the CSV and creates the lote with one nota per line. Lines that fail
      * the basic checks are stored as rejected so the user sees them in the lote.
      */
-    public function importar(Emitente $emitente, ?User $user, string $conteudo, string $nomeArquivo): Lote
+    public function importar(Emitente $emitente, ?User $user, string $conteudo, string $nomeArquivo, ?string $ambiente = null): Lote
     {
         $linhas = $this->ler($conteudo);
 
@@ -51,7 +51,7 @@ class LoteImporter
             ]);
         }
 
-        return $this->criarLote($emitente, $user, $linhas, $nomeArquivo);
+        return $this->criarLote($emitente, $user, $linhas, $nomeArquivo, $ambiente);
     }
 
     /**
@@ -59,19 +59,20 @@ class LoteImporter
      *
      * @param  array<string, string>  $linha
      */
-    public function importarLinha(Emitente $emitente, ?User $user, array $linha, string $nome = 'Emissão individual'): Lote
+    public function importarLinha(Emitente $emitente, ?User $user, array $linha, string $nome = 'Emissão individual', ?string $ambiente = null): Lote
     {
-        return $this->criarLote($emitente, $user, [1 => $linha], $nome);
+        return $this->criarLote($emitente, $user, [1 => $linha], $nome, $ambiente);
     }
 
-    private function criarLote(Emitente $emitente, ?User $user, array $linhas, string $nomeArquivo): Lote
+    private function criarLote(Emitente $emitente, ?User $user, array $linhas, string $nomeArquivo, ?string $ambiente = null): Lote
     {
-        return DB::transaction(function () use ($emitente, $user, $linhas, $nomeArquivo) {
+        return DB::transaction(function () use ($emitente, $user, $linhas, $nomeArquivo, $ambiente) {
             $lote = Lote::create([
                 'emitente_id' => $emitente->id,
                 'user_id' => $user?->id,
                 'arquivo' => $nomeArquivo,
                 'status' => Lote::STATUS_PROCESSANDO,
+                'ambiente' => $ambiente ?? $emitente->ambiente,
                 'total' => count($linhas),
             ]);
 

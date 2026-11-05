@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Emitente;
 use App\Models\Lote;
 use App\Models\NotaFiscal;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\Nfse\DpsBuilder;
 use App\Services\Nfse\XsdValidator;
@@ -260,6 +261,69 @@ class LotesTest extends TestCase
         );
         $this->post(route('lotes.emitir.store'), $this->notaIndividual($bloqueado))->assertForbidden();
         $this->assertSame(0, Lote::count());
+    }
+
+    public function test_environment_choice_is_ignored_until_the_administrador_turns_it_on(): void
+    {
+        $emitente = $this->emitente(); // homologacao
+        $admin = User::where('email', 'admin@example.com')->first();
+
+        // Off by default: the picker is hidden and a forged value does not count.
+        $this->actingAs($admin)->get(route('lotes.emitir'))->assertInertia(fn ($p) => $p->where('permite_escolher_ambiente', false));
+        $this->post(route('lotes.emitir.store'), $this->notaIndividual($emitente, ['ambiente' => 'producao']));
+
+        $lote = Lote::first();
+        $this->assertSame('homologacao', $lote->ambiente);
+        $this->assertStringContainsString('<tpAmb>2</tpAmb>', $lote->notas()->first()->dps_xml);
+    }
+
+    public function test_users_can_pick_the_environment_once_enabled_and_it_reaches_the_dps(): void
+    {
+        $emitente = $this->emitente(); // homologacao
+        Setting::putBool(Setting::ESCOLHER_AMBIENTE, true);
+
+        $operador = User::factory()->create(['all_emitentes' => true]);
+        $operador->syncRoles(['Operador']);
+        $operador->givePermissionTo(['nfse-avulsa.view', 'nfse-avulsa.create', 'lotes-emissao.view', 'lotes-emissao.create']);
+
+        $this->actingAs($operador)->get(route('lotes.emitir'))->assertInertia(fn ($p) => $p->where('permite_escolher_ambiente', true));
+
+        $this->post(route('lotes.emitir.store'), $this->notaIndividual($emitente, ['ambiente' => 'producao']));
+        $this->assertSame('producao', Lote::first()->ambiente);
+        $this->assertStringContainsString('<tpAmb>1</tpAmb>', Lote::first()->notas()->first()->dps_xml);
+
+        $this->post(route('lotes.store'), [
+            'emitente_id' => $emitente->id,
+            'ambiente' => 'producao',
+            'arquivo' => $this->csv(['12345678909;Fulano;;Servico;171901;100,00;2,00;0;2026-11-05;']),
+        ]);
+        $this->assertSame('producao', Lote::latest('id')->first()->ambiente);
+
+        // Left empty it falls back to the emitente's environment; garbage is refused.
+        $this->post(route('lotes.emitir.store'), $this->notaIndividual($emitente));
+        $this->assertSame('homologacao', Lote::latest('id')->first()->ambiente);
+        $this->post(route('lotes.emitir.store'), $this->notaIndividual($emitente, ['ambiente' => 'outro']))->assertSessionHasErrors('ambiente');
+    }
+
+    public function test_only_the_administrador_can_toggle_the_environment_option(): void
+    {
+        $operador = User::factory()->create();
+        $operador->syncRoles(['Operador']);
+        $operador->givePermissionTo(['configuracoes.view', 'configuracoes.edit']);
+
+        $this->actingAs($operador)->get(route('configuracoes.index'))->assertForbidden();
+        $this->post(route('configuracoes.update'), ['escolher_ambiente' => true])->assertForbidden();
+        $this->assertFalse(Setting::bool(Setting::ESCOLHER_AMBIENTE));
+
+        $admin = User::where('email', 'admin@example.com')->first();
+        $this->actingAs($admin)->get(route('configuracoes.index'))->assertOk()
+            ->assertInertia(fn ($p) => $p->component('Admin/Configuracoes/index')->where('escolher_ambiente', false));
+
+        $this->post(route('configuracoes.update'), ['escolher_ambiente' => true])->assertRedirect();
+        $this->assertTrue(Setting::bool(Setting::ESCOLHER_AMBIENTE));
+
+        $this->post(route('configuracoes.update'), ['escolher_ambiente' => false]);
+        $this->assertFalse(Setting::bool(Setting::ESCOLHER_AMBIENTE));
     }
 
     public function test_csv_template_downloads(): void

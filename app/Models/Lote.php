@@ -13,7 +13,7 @@ class Lote extends Model
     public const STATUS_CONCLUIDO = 'concluido';
     public const STATUS_CONCLUIDO_COM_ERROS = 'concluido_com_erros';
 
-    protected $fillable = ['emitente_id', 'user_id', 'arquivo', 'status', 'total', 'processado_em'];
+    protected $fillable = ['emitente_id', 'user_id', 'arquivo', 'status', 'ambiente', 'total', 'processado_em'];
 
     protected $casts = ['processado_em' => 'datetime'];
 

@@ -9,6 +9,7 @@ Sistema para escritórios de contabilidade emitirem notas fiscais de serviço (N
 - **Emitentes:** cadastro de CNPJs com regime tributário, município (código IBGE), certificado A1 e driver de transmissão por emitente.
 - **NFS-e avulsa:** formulário para emitir uma nota.
 - **Lotes:** envio de planilha CSV (até 5.000 linhas), processamento em fila e acompanhamento do andamento.
+- **Ambiente de emissão:** por padrão cada nota usa o ambiente (homologação ou produção) do emitente. O Administrador pode ligar, em Administração > Configurações, a opção de escolher o ambiente a cada lote ou nota; vale para o sistema inteiro.
 - **Painel:** indicadores de emitentes ativos/inativos e de notas por dia, semana, mês e ano (Chart.js com rótulos), além de certificados perto do vencimento.
 - **Módulos e permissões:** o menu lateral é montado a partir de módulos cadastrados no banco; cada módulo gera as permissões `view`, `create`, `edit` e `delete` (mais ações extras).
 - **Papéis e usuários:** o administrador define os papéis e libera cada usuário para todos os emitentes ou só para alguns.

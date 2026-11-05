@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Layout from "../../../Layouts";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import { LoteBadge, NotaBadge, NotaStatus, PorStatus, moeda } from "./status";
+import { nomeDoAmbiente } from "./AmbienteField";
 
 interface NotaRow {
   id: number;
@@ -53,7 +54,7 @@ const LoteShow = (props: any) => {
                 <LoteBadge status={lote.status} />
                 <PorStatus counts={lote.por_status} />
                 <span className="text-muted">
-                  {lote.total} {lote.total === 1 ? "nota" : "notas"} · {lote.emitente} · enviado em {lote.created_at}
+                  {lote.total} {lote.total === 1 ? "nota" : "notas"} · {lote.emitente} · {nomeDoAmbiente(lote.ambiente)} · enviado em {lote.created_at}
                 </span>
                 <Link href={route("lotes.index")} className="ms-auto">
                   Voltar aos lotes

@@ -7,6 +7,7 @@ import Layout from "../../../Layouts";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import { Can } from "../../../common/usePermission";
 import { LoteBadge, NotaStatus, PorStatus } from "./status";
+import { AmbienteField, nomeDoAmbiente } from "./AmbienteField";
 
 interface LoteRow {
   id: number;
@@ -17,23 +18,33 @@ interface LoteRow {
   driver: string;
   created_at: string;
   por_status: Record<NotaStatus, number>;
+  ambiente: string | null;
 }
 
 interface EmitenteOption {
   id: number;
   razao_social: string;
   cnpj: string;
+  ambiente: string;
 }
 
 const LotesIndex = (props: any) => {
   const lotes = props.lotes as LoteRow[];
   const emitentes = props.emitentes as EmitenteOption[];
+  const permiteAmbiente = !!props.permite_escolher_ambiente;
   const { flash }: any = usePage().props;
 
   const { data, setData, post, processing, errors, reset } = useForm({
     emitente_id: "",
+    ambiente: "",
     arquivo: null as File | null,
   });
+
+  // The picker starts on the emitente's own environment.
+  const escolherEmitente = (id: string) => {
+    const emitente = emitentes.find((e) => String(e.id) === id);
+    setData((atual) => ({ ...atual, emitente_id: id, ambiente: emitente?.ambiente ?? "" }));
+  };
 
   useEffect(() => {
     if (flash?.success) toast.success(flash.success, { autoClose: 3000 });
@@ -75,11 +86,11 @@ const LotesIndex = (props: any) => {
               <Card.Body>
                 <Form onSubmit={handleSubmit}>
                   <Row className="g-3 align-items-start">
-                    <Col md={5}>
+                    <Col md={permiteAmbiente ? 3 : 5}>
                       <Form.Label>Emitente</Form.Label>
                       <Form.Select
                         value={data.emitente_id}
-                        onChange={(e) => setData("emitente_id", e.target.value)}
+                        onChange={(e) => escolherEmitente(e.target.value)}
                         isInvalid={!!errors.emitente_id}
                       >
                         <option value="">Selecione o emitente</option>
@@ -91,6 +102,15 @@ const LotesIndex = (props: any) => {
                       </Form.Select>
                       <Form.Control.Feedback type="invalid">{errors.emitente_id}</Form.Control.Feedback>
                     </Col>
+                    {permiteAmbiente && (
+                      <Col md={2}>
+                        <AmbienteField
+                          value={data.ambiente || "homologacao"}
+                          onChange={(valor) => setData("ambiente", valor)}
+                          error={errors.ambiente}
+                        />
+                      </Col>
+                    )}
                     <Col md={5}>
                       <Form.Label>Arquivo CSV</Form.Label>
                       <Form.Control
@@ -129,6 +149,7 @@ const LotesIndex = (props: any) => {
                       <th>Arquivo</th>
                       <th>Emitente</th>
                       <th>Enviado em</th>
+                      <th>Ambiente</th>
                       <th className="text-end">Notas</th>
                       <th>Situação</th>
                       <th>Resultado</th>
@@ -143,6 +164,7 @@ const LotesIndex = (props: any) => {
                         </td>
                         <td>{lote.emitente}</td>
                         <td>{lote.created_at}</td>
+                        <td>{nomeDoAmbiente(lote.ambiente)}</td>
                         <td className="text-end">{lote.total}</td>
                         <td>
                           <LoteBadge status={lote.status} />

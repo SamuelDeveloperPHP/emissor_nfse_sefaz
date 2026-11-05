@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Jobs\ProcessarLoteJob;
 use App\Models\Emitente;
 use App\Models\Lote;
+use App\Models\Setting;
 use App\Services\Nfse\LoteImporter;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class LoteController extends Controller
@@ -30,6 +32,7 @@ class LoteController extends Controller
                 'driver' => $lote->emitente->driver,
                 'created_at' => $lote->created_at->format('d/m/Y H:i'),
                 'por_status' => $lote->contagemPorStatus(),
+                'ambiente' => $lote->ambiente,
             ]);
 
         return Inertia::render('Fiscal/Lotes/index', [
@@ -38,13 +41,28 @@ class LoteController extends Controller
                 ->visibleTo($user)
                 ->active()
                 ->orderBy('razao_social')
-                ->get(['id', 'razao_social', 'cnpj']),
+                ->get(['id', 'razao_social', 'cnpj', 'ambiente']),
+            'permite_escolher_ambiente' => Setting::bool(Setting::ESCOLHER_AMBIENTE),
         ]);
+    }
+
+    /**
+     * Environment the lote is issued in. The choice only counts while the Administrador
+     * has the option switched on; otherwise the emitente's own environment is used.
+     */
+    private function ambienteDoLote(Request $request, Emitente $emitente): string
+    {
+        if (! Setting::bool(Setting::ESCOLHER_AMBIENTE)) {
+            return $emitente->ambiente;
+        }
+
+        return $request->input('ambiente') ?: $emitente->ambiente;
     }
 
     public function store(Request $request, LoteImporter $importer)
     {
         $request->validate([
+            'ambiente' => ['nullable', Rule::in(['homologacao', 'producao'])],
             'emitente_id' => ['required', 'integer', 'exists:emitentes,id'],
             'arquivo' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
         ], [
@@ -61,7 +79,7 @@ class LoteController extends Controller
         }
 
         $arquivo = $request->file('arquivo');
-        $lote = $importer->importar($emitente, $request->user(), (string) file_get_contents($arquivo->getRealPath()), $arquivo->getClientOriginalName());
+        $lote = $importer->importar($emitente, $request->user(), (string) file_get_contents($arquivo->getRealPath()), $arquivo->getClientOriginalName(), $this->ambienteDoLote($request, $emitente));
 
         ProcessarLoteJob::dispatch($lote);
 
@@ -95,6 +113,7 @@ class LoteController extends Controller
                 'driver' => $lote->emitente->driver,
                 'created_at' => $lote->created_at->format('d/m/Y H:i'),
                 'por_status' => $lote->contagemPorStatus(),
+                'ambiente' => $lote->ambiente,
             ],
             'notas' => $notas,
         ]);
@@ -107,13 +126,15 @@ class LoteController extends Controller
                 ->visibleTo($request->user())
                 ->active()
                 ->orderBy('razao_social')
-                ->get(['id', 'razao_social', 'cnpj', 'driver']),
+                ->get(['id', 'razao_social', 'cnpj', 'driver', 'ambiente']),
+            'permite_escolher_ambiente' => Setting::bool(Setting::ESCOLHER_AMBIENTE),
         ]);
     }
 
     public function emitirStore(Request $request, LoteImporter $importer)
     {
         $dados = $request->validate([
+            'ambiente' => ['nullable', Rule::in(['homologacao', 'producao'])],
             'emitente_id' => ['required', 'integer', 'exists:emitentes,id'],
             'tomador_documento' => ['required', 'string', 'max:20'],
             'tomador_nome' => ['required', 'string', 'max:300'],
@@ -135,7 +156,7 @@ class LoteController extends Controller
         }
 
         $linha = [
-            ...collect($dados)->except(['emitente_id', 'iss_retido'])->map(fn ($valor) => (string) $valor)->all(),
+            ...collect($dados)->except(['emitente_id', 'iss_retido', 'ambiente'])->map(fn ($valor) => (string) $valor)->all(),
             'iss_retido' => ! empty($dados['iss_retido']) ? '1' : '0',
         ];
 
@@ -144,7 +165,7 @@ class LoteController extends Controller
             return back()->withErrors(['nota' => $erros])->withInput();
         }
 
-        $lote = $importer->importarLinha($emitente, $request->user(), $linha);
+        $lote = $importer->importarLinha($emitente, $request->user(), $linha, ambiente: $this->ambienteDoLote($request, $emitente));
 
         ProcessarLoteJob::dispatchSync($lote);
 
