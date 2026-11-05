@@ -1,9 +1,8 @@
 import React, { useEffect } from "react";
 import { Button, Card, Container, Table } from "react-bootstrap";
-import { Head, Link, router, usePage } from "@inertiajs/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Head, Link, router } from "@inertiajs/react";
 import Layout from "../../../Layouts";
+import { useFlashAlert } from "../../../common/alerta";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import { LoteBadge, NotaBadge, NotaStatus, PorStatus, moeda } from "./status";
 import { nomeDoAmbiente } from "./AmbienteField";
@@ -29,11 +28,8 @@ interface Paginated<T> {
 const LoteShow = (props: any) => {
   const lote = props.lote;
   const notas = props.notas as Paginated<NotaRow>;
-  const { flash }: any = usePage().props;
 
-  useEffect(() => {
-    if (flash?.success) toast.success(flash.success, { autoClose: 3000 });
-  }, [flash]);
+  useFlashAlert();
 
   useEffect(() => {
     if (lote.status !== "processando") return;
@@ -134,7 +130,6 @@ const LoteShow = (props: any) => {
           </Card>
         </Container>
       </div>
-      <ToastContainer closeButton={false} limit={1} />
     </Layout>
   );
 };

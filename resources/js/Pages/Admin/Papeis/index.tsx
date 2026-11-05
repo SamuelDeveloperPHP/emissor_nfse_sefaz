@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Badge, Button, Card, Col, Container, Form, Modal, Row, Table } from "react-bootstrap";
-import { Head, router, useForm, usePage } from "@inertiajs/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Head, router, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
+import { useFlashAlert } from "../../../common/alerta";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import DeleteModal from "../../../Components/Common/DeleteModal";
 
@@ -35,7 +34,6 @@ const permName = (moduleKey: string, action: string) => `${moduleKey}.${action}`
 const PapeisIndex = (props: any) => {
   const roles = props.roles as RoleRow[];
   const modules = props.modules as ModuleRow[];
-  const { flash }: any = usePage().props;
 
   const leafModules = modules.filter((m) => m.actions.length > 0);
   const parents = modules.filter((m) => m.parent_id === null);
@@ -52,10 +50,7 @@ const PapeisIndex = (props: any) => {
     setChecked(new Set(selectedRole?.permissions ?? []));
   }, [selectedRoleId]);
 
-  useEffect(() => {
-    if (flash?.success) toast.success(flash.success, { autoClose: 3000 });
-    if (flash?.error) toast.error(flash.error, { autoClose: 3000 });
-  }, [flash]);
+  useFlashAlert();
 
   const roleForm = useForm({ name: "" });
 
@@ -273,7 +268,6 @@ const PapeisIndex = (props: any) => {
 
       <DeleteModal show={showDelete} onCloseClick={() => setShowDelete(false)} onDeleteClick={deleteRole} />
 
-      <ToastContainer />
     </Layout>
   );
 };

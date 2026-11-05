@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Button, Card, Col, Container, Form, Modal, Row, Table } from "react-bootstrap";
-import { Head, router, useForm, usePage } from "@inertiajs/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Head, router, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
+import { useFlashAlert } from "../../../common/alerta";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import DeleteModal from "../../../Components/Common/DeleteModal";
 import { Can } from "../../../common/usePermission";
@@ -34,7 +33,6 @@ const emptyForm = {
 
 const ModulosIndex = (props: any) => {
   const modules = props.modules as ModuleRow[];
-  const { flash }: any = usePage().props;
 
   const [showModal, setShowModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
@@ -42,10 +40,7 @@ const ModulosIndex = (props: any) => {
 
   const { data, setData, post, put, processing, errors, reset, transform } = useForm(emptyForm);
 
-  useEffect(() => {
-    if (flash?.success) toast.success(flash.success, { autoClose: 3000 });
-    if (flash?.error) toast.error(flash.error, { autoClose: 3000 });
-  }, [flash]);
+  useFlashAlert();
 
   const openCreate = () => {
     reset();
@@ -242,7 +237,6 @@ const ModulosIndex = (props: any) => {
 
       <DeleteModal show={showDelete} onCloseClick={() => setShowDelete(false)} onDeleteClick={handleDelete} />
 
-      <ToastContainer />
     </Layout>
   );
 };

@@ -48,13 +48,16 @@ class RecorrenciaController extends Controller
         $dados = $this->validated($request);
         $this->autorizar($request, $dados['emitente_id']);
 
-        Recorrencia::create([
-            ...$dados,
-            'user_id' => $request->user()->id,
-            'proxima_emissao' => Recorrencia::proximaData(now(), (int) $dados['dia_do_mes']),
-        ]);
-
-        return back()->with('success', 'Nota recorrente cadastrada.');
+        return $this->executar(
+            fn () => Recorrencia::create([
+                ...$dados,
+                'user_id' => $request->user()->id,
+                'proxima_emissao' => Recorrencia::proximaData(now(), (int) $dados['dia_do_mes']),
+            ]),
+            'Nota recorrente cadastrada.',
+            'Não foi possível cadastrar a nota recorrente. Tente novamente.',
+            ['emitente_id' => $dados['emitente_id']]
+        );
     }
 
     public function update(Request $request, Recorrencia $recorrencia)
@@ -68,17 +71,23 @@ class RecorrenciaController extends Controller
             $dados['proxima_emissao'] = Recorrencia::proximaData(now(), (int) $dados['dia_do_mes']);
         }
 
-        $recorrencia->update($dados);
-
-        return back()->with('success', 'Nota recorrente atualizada.');
+        return $this->executar(
+            fn () => $recorrencia->update($dados),
+            'Nota recorrente atualizada.',
+            'Não foi possível atualizar a nota recorrente. Tente novamente.',
+            ['recorrencia_id' => $recorrencia->id]
+        );
     }
 
     public function destroy(Request $request, Recorrencia $recorrencia)
     {
         $this->autorizar($request, $recorrencia->emitente_id);
-        $recorrencia->delete();
-
-        return back()->with('success', 'Nota recorrente excluída. As notas já emitidas não mudam.');
+        return $this->executar(
+            fn () => $recorrencia->delete(),
+            'Nota recorrente excluída. As notas já emitidas não mudam.',
+            'Não foi possível excluir a nota recorrente. Tente novamente.',
+            ['recorrencia_id' => $recorrencia->id]
+        );
     }
 
     private function autorizar(Request $request, int|string $emitenteId): void

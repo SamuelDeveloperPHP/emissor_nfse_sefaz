@@ -26,9 +26,12 @@ class ServicoController extends Controller
         $dados = $this->validated($request);
         $this->autorizar($request, $dados['emitente_id']);
 
-        Servico::create($dados);
-
-        return back()->with('success', 'Serviço cadastrado.');
+        return $this->executar(
+            fn () => Servico::create($dados),
+            'Serviço cadastrado.',
+            'Não foi possível cadastrar o serviço. Tente novamente.',
+            ['emitente_id' => $dados['emitente_id']]
+        );
     }
 
     public function update(Request $request, Servico $servico)
@@ -37,9 +40,12 @@ class ServicoController extends Controller
         $dados = $this->validated($request);
         $this->autorizar($request, $dados['emitente_id']);
 
-        $servico->update($dados);
-
-        return back()->with('success', 'Serviço atualizado.');
+        return $this->executar(
+            fn () => $servico->update($dados),
+            'Serviço atualizado.',
+            'Não foi possível atualizar o serviço. Tente novamente.',
+            ['servico_id' => $servico->id]
+        );
     }
 
     public function destroy(Request $request, Servico $servico)
@@ -49,9 +55,12 @@ class ServicoController extends Controller
             return back()->with('error', 'Este serviço é usado por uma nota recorrente. Exclua ou troque a recorrência antes.');
         }
 
-        $servico->delete();
-
-        return back()->with('success', 'Serviço excluído.');
+        return $this->executar(
+            fn () => $servico->delete(),
+            'Serviço excluído.',
+            'Não foi possível excluir o serviço. Tente novamente.',
+            ['servico_id' => $servico->id]
+        );
     }
 
     private function autorizar(Request $request, int|string $emitenteId): void

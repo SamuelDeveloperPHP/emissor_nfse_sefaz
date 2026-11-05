@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Badge, Button, Card, Col, Container, Form, Modal, Row, Table } from "react-bootstrap";
-import { Head, router, useForm, usePage } from "@inertiajs/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Head, router, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
+import { useFlashAlert } from "../../../common/alerta";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import DeleteModal from "../../../Components/Common/DeleteModal";
 
@@ -37,7 +36,6 @@ const UsuariosIndex = (props: any) => {
   const users = props.users as UserRow[];
   const roleOptions = props.roles as string[];
   const emitentes = props.emitentes as EmitenteOption[];
-  const { flash }: any = usePage().props;
 
   const [showModal, setShowModal] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
@@ -45,10 +43,7 @@ const UsuariosIndex = (props: any) => {
 
   const { data, setData, post, put, processing, errors, reset } = useForm(emptyForm);
 
-  useEffect(() => {
-    if (flash?.success) toast.success(flash.success, { autoClose: 3000 });
-    if (flash?.error) toast.error(flash.error, { autoClose: 3000 });
-  }, [flash]);
+  useFlashAlert();
 
   const openCreate = () => {
     reset();
@@ -279,7 +274,6 @@ const UsuariosIndex = (props: any) => {
 
       <DeleteModal show={showDelete} onCloseClick={() => setShowDelete(false)} onDeleteClick={handleDelete} />
 
-      <ToastContainer />
     </Layout>
   );
 };

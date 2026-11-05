@@ -27,9 +27,12 @@ class TomadorController extends Controller
         $dados = $this->validated($request);
         $this->autorizar($request, $dados['emitente_id']);
 
-        Tomador::create($dados);
-
-        return back()->with('success', 'Tomador cadastrado.');
+        return $this->executar(
+            fn () => Tomador::create($dados),
+            'Tomador cadastrado.',
+            'Não foi possível cadastrar o tomador. Tente novamente.',
+            ['emitente_id' => $dados['emitente_id']]
+        );
     }
 
     public function update(Request $request, Tomador $tomador)
@@ -38,9 +41,12 @@ class TomadorController extends Controller
         $dados = $this->validated($request, $tomador);
         $this->autorizar($request, $dados['emitente_id']);
 
-        $tomador->update($dados);
-
-        return back()->with('success', 'Tomador atualizado.');
+        return $this->executar(
+            fn () => $tomador->update($dados),
+            'Tomador atualizado.',
+            'Não foi possível atualizar o tomador. Tente novamente.',
+            ['tomador_id' => $tomador->id]
+        );
     }
 
     public function destroy(Request $request, Tomador $tomador)
@@ -50,9 +56,12 @@ class TomadorController extends Controller
             return back()->with('error', 'Este tomador é usado por uma nota recorrente. Exclua ou troque a recorrência antes.');
         }
 
-        $tomador->delete();
-
-        return back()->with('success', 'Tomador excluído.');
+        return $this->executar(
+            fn () => $tomador->delete(),
+            'Tomador excluído.',
+            'Não foi possível excluir o tomador. Tente novamente.',
+            ['tomador_id' => $tomador->id]
+        );
     }
 
     private function autorizar(Request $request, int|string $emitenteId): void

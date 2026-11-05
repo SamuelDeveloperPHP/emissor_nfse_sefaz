@@ -34,14 +34,27 @@ const containsPath = (node: MenuNode, pathname: string): boolean => {
  * matches the theme's CSS, but with simpler, generic open/close state instead of
  * the template's one-boolean-per-item generator (see LayoutMenuData.tsx).
  */
+// Each page renders its own <Layout>, so this component remounts on every visit and its state
+// would reset. The open group lives at module level to survive navigation.
+let grupoAberto: string | null = null;
+
 const DynamicMenu = () => {
   const { auth }: any = usePage().props;
   const menu: MenuNode[] = auth?.menu ?? [];
   const pathname = window.location.pathname;
 
-  const [openKey, setOpenKey] = useState<string | null>(
-    () => menu.find((item) => containsPath(item, pathname))?.key ?? null
-  );
+  // The group that holds the current page wins; otherwise keep whatever was open.
+  const [openKey, setOpenKeyState] = useState<string | null>(() => {
+    const doCaminho = menu.find((item) => item.children.length > 0 && containsPath(item, pathname))?.key;
+    grupoAberto = doCaminho ?? grupoAberto;
+
+    return grupoAberto;
+  });
+
+  const setOpenKey = (key: string | null) => {
+    grupoAberto = key;
+    setOpenKeyState(key);
+  };
 
   if (menu.length === 0) {
     return null;
