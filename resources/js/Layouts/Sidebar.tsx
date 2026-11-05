@@ -1,9 +1,7 @@
 import React, { useEffect } from "react";
 import SimpleBar from "simplebar-react";
 //import logo
-import logoSm from "../../images/logo-sm.png";
-import logoDark from "../../images/logo-dark.png";
-import logoLight from "../../images/logo-light.png";
+import BrandMark from "../Components/Common/BrandMark";
 
 //Import Components
 import { Container } from "react-bootstrap";
@@ -40,19 +38,19 @@ const Sidebar = ({ layoutType } : any) => {
         <div className="navbar-brand-box">
           <Link href="/" className="logo logo-dark">
             <span className="logo-sm">
-              <img src={logoSm} alt="" height="22" />
+              <BrandMark tone="dark" compact />
             </span>
             <span className="logo-lg">
-              <img src={logoDark} alt="" height="17" />
+              <BrandMark tone="dark" />
             </span>
           </Link>
 
           <Link href="/" className="logo logo-light">
             <span className="logo-sm">
-              <img src={logoSm} alt="" height="22" />
+              <BrandMark tone="light" compact />
             </span>
             <span className="logo-lg">
-              <img src={logoLight} alt="" height="17" />
+              <BrandMark tone="light" />
             </span>
           </Link>
           <button

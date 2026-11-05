@@ -253,7 +253,7 @@ class LotesTest extends TestCase
 
         $this->actingAs($operador)->get(route('lotes.emitir'))->assertForbidden();
 
-        $operador->givePermissionTo('lotes-emissao.emitir');
+        $operador->givePermissionTo(['nfse-avulsa.view', 'nfse-avulsa.create']);
 
         $this->get(route('lotes.emitir'))->assertOk()->assertInertia(
             fn ($page) => $page->component('Fiscal/Lotes/emitir')->has('emitentes', 1)

@@ -45,8 +45,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('lotes', [LoteController::class, 'index'])->middleware('permission:lotes-emissao.view')->name('lotes.index');
     Route::get('lotes/modelo', [LoteController::class, 'modelo'])->middleware('permission:lotes-emissao.view')->name('lotes.modelo');
-    Route::get('lotes/emitir', [LoteController::class, 'emitir'])->middleware('permission:lotes-emissao.emitir')->name('lotes.emitir');
-    Route::post('lotes/emitir', [LoteController::class, 'emitirStore'])->middleware('permission:lotes-emissao.emitir')->name('lotes.emitir.store');
+    Route::get('lotes/emitir', [LoteController::class, 'emitir'])->middleware('permission:nfse-avulsa.view')->name('lotes.emitir');
+    Route::post('lotes/emitir', [LoteController::class, 'emitirStore'])->middleware('permission:nfse-avulsa.create')->name('lotes.emitir.store');
     Route::post('lotes', [LoteController::class, 'store'])->middleware('permission:lotes-emissao.create')->name('lotes.store');
     Route::get('lotes/{lote}', [LoteController::class, 'show'])->middleware('permission:lotes-emissao.view')->name('lotes.show');
 

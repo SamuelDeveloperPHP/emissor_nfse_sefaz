@@ -59,7 +59,7 @@ const LotesIndex = (props: any) => {
         <Container fluid>
           <BreadCrumb title="Lotes de emissão" pageTitle="Fiscal" />
 
-          <Can permission="lotes-emissao.emitir">
+          <Can permission="nfse-avulsa.view">
             <div className="d-flex justify-content-end mb-3">
               <Link href={route("lotes.emitir")} className="btn btn-outline-primary">
                 Emitir uma nota

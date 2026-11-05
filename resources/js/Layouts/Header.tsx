@@ -2,9 +2,7 @@ import { Link } from "@inertiajs/react";
 import React from "react";
 
 //import images
-import logoSm from "../../images/logo-sm.png";
-import logoDark from "../../images/logo-dark.png";
-import logoLight from "../../images/logo-light.png";
+import BrandMark from "../Components/Common/BrandMark";
 import { useDispatch, useSelector } from "react-redux";
 import { createSelector } from "@reduxjs/toolkit";
 import { changeSidebarVisibility } from "../slices/thunk";
@@ -68,19 +66,19 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass }: any) => {
                             <div className="navbar-brand-box horizontal-logo">
                                 <Link href="/" className="logo logo-dark">
                                     <span className="logo-sm">
-                                        <img src={logoSm} alt="" height="22" />
+                                        <BrandMark tone="dark" compact />
                                     </span>
                                     <span className="logo-lg">
-                                        <img src={logoDark} alt="" height="17" />
+                                        <BrandMark tone="dark" />
                                     </span>
                                 </Link>
 
                                 <Link href="/" className="logo logo-light">
                                     <span className="logo-sm">
-                                        <img src={logoSm} alt="" height="22" />
+                                        <BrandMark tone="light" compact />
                                     </span>
                                     <span className="logo-lg">
-                                        <img src={logoLight} alt="" height="17" />
+                                        <BrandMark tone="light" />
                                     </span>
                                 </Link>
                             </div>
