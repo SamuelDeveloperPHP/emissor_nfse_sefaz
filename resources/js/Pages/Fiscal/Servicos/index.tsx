@@ -16,6 +16,9 @@ interface ServicoRow {
   codigo_tributacao: string;
   aliquota: string | null;
   iss_retido: boolean;
+  ibscbs_codigo_operacao: string | null;
+  ibscbs_cst: string | null;
+  ibscbs_classificacao: string | null;
 }
 
 const vazio = {
@@ -26,6 +29,9 @@ const vazio = {
   codigo_tributacao: "",
   aliquota: "",
   iss_retido: false,
+  ibscbs_codigo_operacao: "",
+  ibscbs_cst: "",
+  ibscbs_classificacao: "",
 };
 
 const ServicosIndex = (props: any) => {
@@ -59,6 +65,9 @@ const ServicosIndex = (props: any) => {
       codigo_tributacao: s.codigo_tributacao,
       aliquota: s.aliquota ?? "",
       iss_retido: s.iss_retido,
+      ibscbs_codigo_operacao: s.ibscbs_codigo_operacao ?? "",
+      ibscbs_cst: s.ibscbs_cst ?? "",
+      ibscbs_classificacao: s.ibscbs_classificacao ?? "",
     });
     setAberto(true);
   };
@@ -176,6 +185,27 @@ const ServicosIndex = (props: any) => {
               </Col>
               <Col md={4} className="d-flex align-items-end">
                 <Form.Check type="switch" id="servico_retido" label="ISS retido pelo tomador" checked={data.iss_retido} onChange={(e) => setData("iss_retido", e.target.checked)} />
+              </Col>
+              <Col md={12}>
+                <div className="fw-semibold">IBS e CBS (reforma tributária)</div>
+                <div className="text-muted small">
+                  Opcional. Use os códigos das tabelas oficiais do Sistema Nacional NFS-e. A nota só leva o grupo IBS/CBS se os três campos estiverem preenchidos; o sistema confere o formato, e quem valida o conteúdo é o ADN.
+                </div>
+              </Col>
+              <Col md={4}>
+                <Form.Label>Indicador de operação (6 dígitos)</Form.Label>
+                <Form.Control value={data.ibscbs_codigo_operacao} onChange={(e) => setData("ibscbs_codigo_operacao", e.target.value)} isInvalid={!!errors.ibscbs_codigo_operacao} />
+                <Form.Control.Feedback type="invalid">{errors.ibscbs_codigo_operacao}</Form.Control.Feedback>
+              </Col>
+              <Col md={4}>
+                <Form.Label>CST (3 dígitos)</Form.Label>
+                <Form.Control value={data.ibscbs_cst} onChange={(e) => setData("ibscbs_cst", e.target.value)} isInvalid={!!errors.ibscbs_cst} />
+                <Form.Control.Feedback type="invalid">{errors.ibscbs_cst}</Form.Control.Feedback>
+              </Col>
+              <Col md={4}>
+                <Form.Label>Classificação tributária (6 dígitos)</Form.Label>
+                <Form.Control value={data.ibscbs_classificacao} onChange={(e) => setData("ibscbs_classificacao", e.target.value)} isInvalid={!!errors.ibscbs_classificacao} />
+                <Form.Control.Feedback type="invalid">{errors.ibscbs_classificacao}</Form.Control.Feedback>
               </Col>
             </Row>
           </Modal.Body>

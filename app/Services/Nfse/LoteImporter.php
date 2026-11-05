@@ -31,6 +31,10 @@ class LoteImporter
         'tomador_complemento',
         'tomador_bairro',
         'tomador_codigo_municipio',
+        // Optional: IBS/CBS group (reforma tributária). All three or none.
+        'ibscbs_codigo_operacao',
+        'ibscbs_cst',
+        'ibscbs_classificacao',
     ];
 
     private const OBRIGATORIAS = [
@@ -131,6 +135,9 @@ class LoteImporter
                 $p['tomador_complemento'] ?? '',
                 $p['tomador_bairro'] ?? '',
                 $p['tomador_codigo_municipio'] ?? '',
+                $p['ibscbs_codigo_operacao'] ?? '',
+                $p['ibscbs_cst'] ?? '',
+                $p['ibscbs_classificacao'] ?? '',
                 implode(' | ', $nota->erros ?? [$nota->motivo_rejeicao]),
             ]), ';');
         });
@@ -211,7 +218,7 @@ class LoteImporter
     public static function modeloCsv(): string
     {
         return "\xEF\xBB\xBF".implode(';', self::COLUNAS)."\n"
-            ."12345678909;Maria da Silva;maria@exemplo.com.br;Consultoria contábil mensal;171901;1500,00;2,00;0;".now()->toDateString().";;;;;;;\n";
+            ."12345678909;Maria da Silva;maria@exemplo.com.br;Consultoria contábil mensal;171901;1500,00;2,00;0;".now()->toDateString().";;;;;;;;;;\n";
     }
 
     /**
@@ -332,8 +339,20 @@ class LoteImporter
             }
         }
 
+        $ibscbs = [
+            'ibscbs_codigo_operacao' => preg_replace('/\D/', '', $linha['ibscbs_codigo_operacao'] ?? ''),
+            'ibscbs_cst' => preg_replace('/\D/', '', $linha['ibscbs_cst'] ?? ''),
+            'ibscbs_classificacao' => preg_replace('/\D/', '', $linha['ibscbs_classificacao'] ?? ''),
+        ];
+        if (array_filter($ibscbs) !== []) {
+            if (strlen($ibscbs['ibscbs_codigo_operacao']) !== 6 || strlen($ibscbs['ibscbs_cst']) !== 3 || strlen($ibscbs['ibscbs_classificacao']) !== 6) {
+                $erros[] = 'O grupo IBS/CBS está incompleto: informe o indicador de operação (6 dígitos), o CST (3 dígitos) e a classificação tributária (6 dígitos), ou deixe os três em branco.';
+            }
+        }
+
         $payload = [
             ...$endereco,
+            ...$ibscbs,
             'tomador_documento' => $documento,
             'tomador_nome' => $nome,
             'tomador_email' => $linha['tomador_email'] ?? '',

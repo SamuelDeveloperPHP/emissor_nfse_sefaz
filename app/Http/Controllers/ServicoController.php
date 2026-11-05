@@ -16,7 +16,7 @@ class ServicoController extends Controller
 
         return Inertia::render('Fiscal/Servicos/index', [
             'servicos' => Servico::query()->visibleTo($user)->with('emitente:id,razao_social')->orderBy('nome')->get()
-                ->map(fn (Servico $s) => [...$s->only(['id', 'emitente_id', 'nome', 'descricao', 'codigo_tributacao', 'aliquota', 'iss_retido']), 'emitente' => $s->emitente->razao_social]),
+                ->map(fn (Servico $s) => [...$s->only(['id', 'emitente_id', 'nome', 'descricao', 'codigo_tributacao', 'aliquota', 'iss_retido', 'ibscbs_codigo_operacao', 'ibscbs_cst', 'ibscbs_classificacao']), 'emitente' => $s->emitente->razao_social]),
             'emitentes' => Emitente::query()->visibleTo($user)->active()->orderBy('razao_social')->get(['id', 'razao_social']),
         ]);
     }
@@ -65,7 +65,12 @@ class ServicoController extends Controller
             abort_unless($request->user()->canAccessEmitente($alvo), 403);
         }
 
-        $request->merge(['codigo_tributacao' => preg_replace('/\D/', '', (string) $request->input('codigo_tributacao'))]);
+        $request->merge([
+            'codigo_tributacao' => preg_replace('/\D/', '', (string) $request->input('codigo_tributacao')),
+            'ibscbs_codigo_operacao' => preg_replace('/\D/', '', (string) $request->input('ibscbs_codigo_operacao')) ?: null,
+            'ibscbs_cst' => preg_replace('/\D/', '', (string) $request->input('ibscbs_cst')) ?: null,
+            'ibscbs_classificacao' => preg_replace('/\D/', '', (string) $request->input('ibscbs_classificacao')) ?: null,
+        ]);
 
         if (is_string($request->input('aliquota'))) {
             $request->merge(['aliquota' => str_replace(',', '.', $request->input('aliquota')) ?: null]);
@@ -78,7 +83,17 @@ class ServicoController extends Controller
             'codigo_tributacao' => ['required', 'digits:6'],
             'aliquota' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'iss_retido' => ['required', 'boolean'],
+            // All three or none: the DPS carries the IBS/CBS group only when it is complete.
+            'ibscbs_codigo_operacao' => ['nullable', 'digits:6', 'required_with:ibscbs_cst,ibscbs_classificacao'],
+            'ibscbs_cst' => ['nullable', 'digits:3', 'required_with:ibscbs_codigo_operacao,ibscbs_classificacao'],
+            'ibscbs_classificacao' => ['nullable', 'digits:6', 'required_with:ibscbs_codigo_operacao,ibscbs_cst'],
         ], [
+            'ibscbs_codigo_operacao.required_with' => 'Informe os três códigos do IBS/CBS, ou deixe os três em branco.',
+            'ibscbs_cst.required_with' => 'Informe os três códigos do IBS/CBS, ou deixe os três em branco.',
+            'ibscbs_classificacao.required_with' => 'Informe os três códigos do IBS/CBS, ou deixe os três em branco.',
+            'ibscbs_codigo_operacao.digits' => 'O indicador de operação tem 6 dígitos.',
+            'ibscbs_cst.digits' => 'O CST tem 3 dígitos.',
+            'ibscbs_classificacao.digits' => 'A classificação tributária tem 6 dígitos.',
             'codigo_tributacao.digits' => 'O código de tributação nacional tem 6 dígitos.',
         ]);
     }

@@ -114,7 +114,29 @@ class DpsBuilder
         $totTrib = $this->child($doc, $trib, 'totTrib');
         $this->child($doc, $totTrib, 'indTotTrib', '0');
 
+        if ($this->ibscbsCompleto($payload)) {
+            $ibscbs = $this->child($doc, $inf, 'IBSCBS');
+            $this->child($doc, $ibscbs, 'finNFSe', '0');
+            $this->child($doc, $ibscbs, 'cIndOp', $payload['ibscbs_codigo_operacao']);
+            $this->child($doc, $ibscbs, 'indDest', '0'); // the destinatário is the tomador itself
+            $gIbsCbs = $this->child($doc, $this->child($doc, $this->child($doc, $ibscbs, 'valores'), 'trib'), 'gIBSCBS');
+            $this->child($doc, $gIbsCbs, 'CST', $payload['ibscbs_cst']);
+            $this->child($doc, $gIbsCbs, 'cClassTrib', $payload['ibscbs_classificacao']);
+        }
+
         return $doc->saveXML();
+    }
+
+    /** The IBS/CBS group goes into the DPS only when the three codes are all there. */
+    private function ibscbsCompleto(array $payload): bool
+    {
+        foreach (['ibscbs_codigo_operacao', 'ibscbs_cst', 'ibscbs_classificacao'] as $campo) {
+            if (blank($payload[$campo] ?? null)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function enderecoCompleto(array $payload): bool

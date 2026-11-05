@@ -9,7 +9,7 @@ class Servico extends Model
 {
     protected $table = 'servicos';
 
-    protected $fillable = ['emitente_id', 'nome', 'descricao', 'codigo_tributacao', 'aliquota', 'iss_retido'];
+    protected $fillable = ['emitente_id', 'nome', 'descricao', 'codigo_tributacao', 'aliquota', 'iss_retido', 'ibscbs_codigo_operacao', 'ibscbs_cst', 'ibscbs_classificacao'];
 
     protected $casts = ['aliquota' => 'decimal:2', 'iss_retido' => 'boolean'];
 

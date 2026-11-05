@@ -109,6 +109,9 @@ class EmitirRecorrencias
             'valor_servico' => (string) $r->valor,
             'aliquota_iss' => $s->aliquota !== null ? (string) $s->aliquota : '',
             'iss_retido' => $s->iss_retido ? '1' : '0',
+            'ibscbs_codigo_operacao' => (string) $s->ibscbs_codigo_operacao,
+            'ibscbs_cst' => (string) $s->ibscbs_cst,
+            'ibscbs_classificacao' => (string) $s->ibscbs_classificacao,
             'data_competencia' => $hoje->toDateString(),
         ];
     }
