@@ -20,6 +20,11 @@ return [
             'homologacao' => env('NFSE_URL_HOMOLOGACAO', 'https://sefin.producaorestrita.nfse.gov.br/API/SefinNacional'),
             'producao' => env('NFSE_URL_PRODUCAO', 'https://sefin.nfse.gov.br/SefinNacional'),
         ],
+        // DANFSE (PDF) service of the ADN.
+        'danfse_urls' => [
+            'homologacao' => env('NFSE_DANFSE_URL_HOMOLOGACAO', 'https://adn.producaorestrita.nfse.gov.br/danfse'),
+            'producao' => env('NFSE_DANFSE_URL_PRODUCAO', 'https://adn.nfse.gov.br/danfse'),
+        ],
         'timeout' => (int) env('NFSE_TIMEOUT', 30),
     ],
 

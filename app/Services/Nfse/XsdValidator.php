@@ -14,7 +14,19 @@ class XsdValidator
      */
     public function validarDps(string $xml): array
     {
-        $schema = config('nfse.xsd_path').'/DPS_v'.config('nfse.versao_leiaute').'.xsd';
+        return $this->validar($xml, 'DPS');
+    }
+
+    /** Pedido de registro de evento (cancelamento etc.). */
+    public function validarEvento(string $xml): array
+    {
+        return $this->validar($xml, 'pedRegEvento');
+    }
+
+    /** @return array<int, string> */
+    private function validar(string $xml, string $arquivo): array
+    {
+        $schema = config('nfse.xsd_path').'/'.$arquivo.'_v'.config('nfse.versao_leiaute').'.xsd';
 
         $previous = libxml_use_internal_errors(true);
         libxml_clear_errors();

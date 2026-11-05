@@ -32,14 +32,9 @@ class AdnNacionalDriver implements Transmissor
         $ambiente = $nota->lote?->ambiente ?? $emitente->ambiente;
 
         try {
-            $certificado = CertificadoA1::doEmitente($emitente);
-
-            $resposta = $certificado->comArquivosTemporarios(
-                fn (string $certFile, string $keyFile) => Http::withOptions(['cert' => $certFile, 'ssl_key' => $keyFile])
-                    ->timeout(config('nfse.adn.timeout'))
-                    ->acceptJson()
-                    ->asJson()
-                    ->post($this->url($ambiente, '/nfse'), ['dpsXmlGZipB64' => base64_encode(gzencode($dpsXml))])
+            $resposta = $this->comCertificado(
+                $emitente,
+                fn ($http) => $http->post($this->url($ambiente, '/nfse'), ['dpsXmlGZipB64' => base64_encode(gzencode($dpsXml))])
             );
         } catch (NfseException $e) {
             return $this->pendente($e->getMessage());
@@ -48,6 +43,117 @@ class AdnNacionalDriver implements Transmissor
         }
 
         return $this->interpretar($resposta);
+    }
+
+    public function consultar(Emitente $emitente, NotaFiscal $nota): array
+    {
+        $idDps = $this->idDaDps($nota->dps_xml);
+        if ($idDps === null) {
+            return $this->pendente('A nota não tem a DPS guardada; não há o que consultar.');
+        }
+
+        $ambiente = $nota->lote?->ambiente ?? $emitente->ambiente;
+
+        try {
+            return $this->comCertificado($emitente, function ($http) use ($ambiente, $idDps, $nota) {
+                $porDps = $http->get($this->url($ambiente, '/dps/'.$idDps));
+
+                if ($porDps->status() === 404) {
+                    return $this->pendente('O ADN ainda não encontrou esta DPS. Se passar de algumas horas, emita a nota novamente.');
+                }
+                if (! $porDps->successful()) {
+                    return $this->pendente("A consulta ao ADN respondeu HTTP {$porDps->status()}; tente de novo mais tarde.");
+                }
+
+                $chave = $porDps->json('chaveAcesso') ?? $nota->chave_acesso;
+                if (! is_string($chave) || $chave === '') {
+                    return $this->pendente('O ADN conhece a DPS, mas ainda não devolveu a chave de acesso da NFS-e.', $porDps->json());
+                }
+
+                $nfse = $http->get($this->url($ambiente, '/nfse/'.$chave));
+                if ($nfse->successful()) {
+                    return $this->interpretar($nfse, $chave);
+                }
+
+                // The key exists, so the nota was authorized even if its XML could not be fetched now.
+                return ['status' => NotaFiscal::STATUS_AUTORIZADA, 'mensagens' => ['NFS-e autorizada; o XML ainda não pôde ser baixado do ADN.'], 'chave_acesso' => $chave, 'resposta' => $porDps->json()];
+            });
+        } catch (NfseException $e) {
+            return $this->pendente($e->getMessage());
+        } catch (ConnectionException $e) {
+            return $this->pendente('Sem resposta do ADN na consulta ('.$e->getMessage().'); tente de novo mais tarde.');
+        }
+    }
+
+    public function cancelar(Emitente $emitente, NotaFiscal $nota, string $eventoXml): array
+    {
+        $ambiente = $nota->lote?->ambiente ?? $emitente->ambiente;
+
+        try {
+            $resposta = $this->comCertificado($emitente, fn ($http) => $http->post(
+                $this->url($ambiente, '/nfse/'.$nota->chave_acesso.'/eventos'),
+                ['pedidoRegistroEventoXmlGZipB64' => base64_encode(gzencode($eventoXml))]
+            ));
+        } catch (NfseException $e) {
+            return ['cancelada' => false, 'mensagens' => [$e->getMessage()]];
+        } catch (ConnectionException $e) {
+            return ['cancelada' => false, 'mensagens' => ['Sem resposta do ADN ('.$e->getMessage().'). O cancelamento pode ter sido registrado: consulte a nota antes de tentar de novo.']];
+        }
+
+        $json = $resposta->json();
+        $json = is_array($json) ? $json : [];
+
+        if ($resposta->successful()) {
+            return ['cancelada' => true, 'mensagens' => $this->mensagens($json['alertas'] ?? []), 'resposta' => $json ?: null];
+        }
+
+        $erros = $this->mensagens($json['erros'] ?? $json['erro'] ?? $json['errors'] ?? []);
+
+        return [
+            'cancelada' => false,
+            'mensagens' => $erros ?: ["O ADN recusou o cancelamento (HTTP {$resposta->status()}): ".mb_substr(trim($resposta->body()), 0, 300)],
+            'resposta' => $json ?: null,
+        ];
+    }
+
+    public function baixarDanfse(Emitente $emitente, NotaFiscal $nota): ?string
+    {
+        if (blank($nota->chave_acesso)) {
+            return null;
+        }
+
+        $ambiente = $nota->lote?->ambiente ?? $emitente->ambiente;
+        $base = rtrim(config('nfse.adn.danfse_urls.'.($ambiente === 'producao' ? 'producao' : 'homologacao')), '/');
+
+        try {
+            $resposta = $this->comCertificado($emitente, fn ($http) => $http->get($base.'/'.$nota->chave_acesso));
+        } catch (NfseException|ConnectionException) {
+            return null;
+        }
+
+        return $resposta->successful() && str_starts_with($resposta->body(), '%PDF') ? $resposta->body() : null;
+    }
+
+    /**
+     * Runs $uso with an HTTP client that presents the emitente's A1 certificate (mTLS).
+     *
+     * @template T
+     *
+     * @param  callable(\Illuminate\Http\Client\PendingRequest): T  $uso
+     * @return T
+     */
+    private function comCertificado(Emitente $emitente, callable $uso)
+    {
+        return CertificadoA1::doEmitente($emitente)->comArquivosTemporarios(
+            fn (string $certFile, string $keyFile) => $uso(
+                Http::withOptions(['cert' => $certFile, 'ssl_key' => $keyFile])->timeout(config('nfse.adn.timeout'))->acceptJson()->asJson()
+            )
+        );
+    }
+
+    private function idDaDps(?string $xml): ?string
+    {
+        return $xml !== null && preg_match('/<infDPS[^>]*\bId="(DPS\d+)"/', $xml, $m) ? $m[1] : null;
     }
 
     /** Base URL of the SEFIN Nacional for the environment; the lote's environment, never the emitente's default. */
@@ -59,14 +165,14 @@ class AdnNacionalDriver implements Transmissor
     }
 
     /** @return array{status: string, mensagens: array<int, string>, chave_acesso?: ?string, numero_nfse?: ?string, nfse_xml?: ?string, resposta?: ?array} */
-    private function interpretar(Response $resposta): array
+    private function interpretar(Response $resposta, ?string $chaveConhecida = null): array
     {
         $json = $resposta->json();
         $json = is_array($json) ? $json : [];
 
         if ($resposta->successful()) {
             $xml = $this->xmlDaNfse($json);
-            $chave = $json['chaveAcesso'] ?? $this->chaveDoXml($xml);
+            $chave = $json['chaveAcesso'] ?? $this->chaveDoXml($xml) ?? $chaveConhecida;
 
             if ($chave === null && $xml === null) {
                 return $this->pendente('O ADN respondeu sucesso, mas sem a NFS-e nem a chave de acesso; consulte a situação da nota.', $json);

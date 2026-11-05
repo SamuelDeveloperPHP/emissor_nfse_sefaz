@@ -46,15 +46,15 @@ chmod -R 775 storage bootstrap/cache
 
 Se o comando `php` não for a versão 8.2, use o caminho completo (ex.: `/opt/cpanel/ea-php82/root/usr/bin/php`). O `db:seed` em produção **não** cria o login `admin@example.com`; o primeiro administrador é o do `usuarios:criar-admin` (senha de 12+ caracteres, pedida no terminal).
 
-## 6. Fila de lotes (cron)
+## 6. Tarefas agendadas (cron)
 
-Em "Cron Jobs", a cada minuto:
+Em "Cron Jobs", **uma única entrada**, a cada minuto:
 
 ```
-* * * * * /opt/cpanel/ea-php82/root/usr/bin/php /home/USUARIO/emissor/artisan queue:work --stop-when-empty --max-time=50 >/dev/null 2>&1
+* * * * * /opt/cpanel/ea-php82/root/usr/bin/php /home/USUARIO/emissor/artisan schedule:run >/dev/null 2>&1
 ```
 
-Sem isso, os lotes enviados ficam em "Processando" para sempre.
+O agendador do sistema cuida de duas coisas: processar a fila de lotes (a cada minuto) e consultar no ADN as notas que ficaram pendentes por timeout ou erro do servidor (a cada 5 minutos). Se você já tinha criado o cron antigo com `queue:work`, **apague-o** e use só esta linha. Sem ela, os lotes ficam em "Processando" para sempre.
 
 ## 7. Conferir
 
@@ -62,9 +62,9 @@ Sem isso, os lotes enviados ficam em "Processando" para sempre.
 - Entre com o administrador, cadastre um emitente e envie um lote pequeno.
 - Crie os usuários dos contadores em Administração > Usuários, com papel e emitentes liberados.
 
-## O que ainda não é emissão real
+## Antes de emitir de verdade
 
-Hoje só o driver **Simulador local** autoriza notas, e ele não emite nada de verdade. Os outros drivers geram e validam a DPS no XSD oficial, mas não assinam nem transmitem: faltam a assinatura com o certificado A1 e a conexão com a API da NFS-e Nacional. Mantenha os emitentes em **Homologação** até lá.
+O driver **ADN Nacional** assina a DPS com o certificado A1 e transmite ao SEFIN Nacional, mas o contrato da API ainda não foi confirmado contra o ADN real. Antes de qualquer uso fiscal: cadastre um emitente com certificado A1 válido, deixe-o em **Homologação** (produção restrita), emita um lote pequeno e confira se o ADN aceita a nota, o XML e o cancelamento. Se o ADN recusar a assinatura, teste `NFSE_ASSINATURA_ALGORITMO=sha256` no `.env`. O driver **Simulador local** não emite nada de verdade.
 
 ## Atualizar depois
 

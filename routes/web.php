@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmitenteController;
 use App\Http\Controllers\LoteController;
 use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\NotaFiscalController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
@@ -50,6 +51,13 @@ Route::middleware('auth')->group(function () {
     Route::post('lotes/emitir', [LoteController::class, 'emitirStore'])->middleware('permission:nfse-avulsa.create')->name('lotes.emitir.store');
     Route::post('lotes', [LoteController::class, 'store'])->middleware('permission:lotes-emissao.create')->name('lotes.store');
     Route::get('lotes/{lote}', [LoteController::class, 'show'])->middleware('permission:lotes-emissao.view')->name('lotes.show');
+
+    Route::get('notas', [NotaFiscalController::class, 'index'])->middleware('permission:notas-fiscais.view')->name('notas.index');
+    Route::get('notas/{nota}', [NotaFiscalController::class, 'show'])->middleware('permission:notas-fiscais.view')->name('notas.show');
+    Route::get('notas/{nota}/xml/{tipo}', [NotaFiscalController::class, 'xml'])->middleware('permission:notas-fiscais.view')->name('notas.xml');
+    Route::get('notas/{nota}/danfse', [NotaFiscalController::class, 'danfse'])->middleware('permission:notas-fiscais.view')->name('notas.danfse');
+    Route::post('notas/{nota}/consultar', [NotaFiscalController::class, 'consultar'])->middleware('permission:notas-fiscais.view')->name('notas.consultar');
+    Route::post('notas/{nota}/cancelar', [NotaFiscalController::class, 'cancelar'])->middleware('permission:notas-fiscais.cancelar')->name('notas.cancelar');
 
     // System-wide settings: only the Administrador role, whatever the permission matrix says.
     Route::get('configuracoes', [SettingController::class, 'index'])->middleware('role:Administrador')->name('configuracoes.index');

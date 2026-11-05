@@ -23,4 +23,19 @@ class SimuladorDriver implements Transmissor
             'mensagens' => ['Autorizada pelo simulador local; nenhuma NFS-e real foi emitida.'],
         ];
     }
+
+    public function consultar(Emitente $emitente, NotaFiscal $nota): array
+    {
+        return ['status' => $nota->status, 'mensagens' => ['Consulta feita no simulador local; nada foi verificado em um órgão real.']];
+    }
+
+    public function cancelar(Emitente $emitente, NotaFiscal $nota, string $eventoXml): array
+    {
+        return ['cancelada' => true, 'mensagens' => ['Cancelada no simulador local; nenhum cancelamento real foi registrado.']];
+    }
+
+    public function baixarDanfse(Emitente $emitente, NotaFiscal $nota): ?string
+    {
+        return null;
+    }
 }

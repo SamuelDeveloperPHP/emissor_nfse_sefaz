@@ -97,9 +97,10 @@ class ModulesSeeder extends Seeder
         Module::updateOrCreate(['key' => 'notas-fiscais'], [
             'name' => 'Notas Fiscais',
             'icon' => 'bx bx-file',
+            'route' => 'notas.index',
             'parent_id' => $fiscal->id,
-            'order' => 13,
-            'is_active' => false,
+            'order' => 14,
+            'is_active' => true,
             'actions' => ['cancelar'],
         ]);
 
@@ -107,7 +108,7 @@ class ModulesSeeder extends Seeder
             'name' => 'Monitoramento',
             'icon' => 'bx bx-pulse',
             'parent_id' => $fiscal->id,
-            'order' => 14,
+            'order' => 15,
             'is_active' => false,
         ]);
     }

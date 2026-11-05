@@ -18,10 +18,12 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\GeraCertificadoDeTeste;
 use Tests\TestCase;
 
 class AdnTransmissaoTest extends TestCase
 {
+    use GeraCertificadoDeTeste;
     use RefreshDatabase;
 
     private const SENHA = 'segredo-de-teste';
@@ -36,23 +38,6 @@ class AdnTransmissaoTest extends TestCase
 
         Storage::fake('local');
         $this->pfx = $this->gerarPfx(self::SENHA);
-    }
-
-    /** A throwaway self-signed certificate: enough to exercise real signing, never valid for the ADN. */
-    private function gerarPfx(string $senha, int $dias = 365): string
-    {
-        $config = ['digest_alg' => 'sha256', 'private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA];
-        $cnf = dirname(PHP_BINARY).'/extras/ssl/openssl.cnf';
-        if (! getenv('OPENSSL_CONF') && is_file($cnf)) {
-            $config['config'] = $cnf;
-        }
-
-        $chave = openssl_pkey_new($config);
-        $csr = openssl_csr_new(['commonName' => 'EMPRESA TESTE LTDA:11222333000181'], $chave, $config);
-        $cert = openssl_csr_sign($csr, null, $chave, $dias, $config);
-        openssl_pkcs12_export($cert, $pfx, $chave, $senha);
-
-        return $pfx;
     }
 
     private function emitente(string $driver = 'adn_nacional', bool $comCertificado = true): Emitente

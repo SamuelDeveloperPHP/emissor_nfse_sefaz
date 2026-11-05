@@ -27,19 +27,30 @@ class XmlSigner
 
     public function assinarDps(string $xml, CertificadoA1 $certificado, ?string $algoritmo = null): string
     {
+        return $this->assinar($xml, $certificado, 'infDPS', $algoritmo);
+    }
+
+    /** Pedido de registro de evento: the signed element is infPedReg. */
+    public function assinarEvento(string $xml, CertificadoA1 $certificado, ?string $algoritmo = null): string
+    {
+        return $this->assinar($xml, $certificado, 'infPedReg', $algoritmo);
+    }
+
+    private function assinar(string $xml, CertificadoA1 $certificado, string $elemento, ?string $algoritmo): string
+    {
         $algoritmo ??= config('nfse.assinatura.algoritmo', 'sha1');
         $alg = self::ALGORITMOS[$algoritmo] ?? throw new NfseException("Algoritmo de assinatura desconhecido: {$algoritmo}.");
 
         $doc = $this->carregar($xml);
         $raiz = $doc->documentElement;
-        $inf = $this->infDps($doc);
+        $inf = $this->elementoAssinado($doc, $elemento);
         $id = $inf->getAttribute('Id');
 
         if ($id === '') {
-            throw new NfseException('O infDPS não tem o atributo Id; não há o que assinar.');
+            throw new NfseException("O {$elemento} não tem o atributo Id; não há o que assinar.");
         }
         if ($this->assinatura($doc) !== null) {
-            throw new NfseException('Esta DPS já está assinada.');
+            throw new NfseException('Este documento já está assinado.');
         }
 
         $digest = base64_encode(hash($algoritmo, $inf->C14N(false, false), true));
@@ -72,7 +83,7 @@ class XmlSigner
 
         $assinado = $doc->saveXML();
 
-        if (! $this->verificar($assinado)) {
+        if (! $this->verificar($assinado, $elemento)) {
             throw new NfseException('A assinatura gerada não passou na verificação interna.');
         }
 
@@ -80,7 +91,7 @@ class XmlSigner
     }
 
     /** Checks the digest and the signature using the certificate embedded in KeyInfo. */
-    public function verificar(string $xml): bool
+    public function verificar(string $xml, string $elemento = 'infDPS'): bool
     {
         try {
             $doc = $this->carregar($xml);
@@ -108,7 +119,11 @@ class XmlSigner
         }
 
         // The signature must sit directly under DPS and point at infDPS itself, not at some other node.
-        $inf = $this->infDps($doc);
+        try {
+            $inf = $this->elementoAssinado($doc, $elemento);
+        } catch (NfseException) {
+            return false;
+        }
         if ($algoritmo === null || $signature->parentNode !== $doc->documentElement || $uri !== '#'.$inf->getAttribute('Id')) {
             return false;
         }
@@ -149,11 +164,11 @@ class XmlSigner
         return $doc;
     }
 
-    private function infDps(DOMDocument $doc): DOMElement
+    private function elementoAssinado(DOMDocument $doc, string $nome): DOMElement
     {
-        $inf = $doc->getElementsByTagNameNS(DpsBuilder::NAMESPACE, 'infDPS')->item(0);
+        $inf = $doc->getElementsByTagNameNS(DpsBuilder::NAMESPACE, $nome)->item(0);
 
-        return $inf instanceof DOMElement ? $inf : throw new NfseException('A DPS não tem o elemento infDPS.');
+        return $inf instanceof DOMElement ? $inf : throw new NfseException("O XML não tem o elemento {$nome}.");
     }
 
     private function assinatura(DOMDocument $doc): ?DOMElement
