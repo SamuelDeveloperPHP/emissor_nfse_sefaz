@@ -7,13 +7,8 @@ const Footer = () => {
             <footer className="footer">
                 <Container fluid>
                     <Row>
-                        <Col sm={6}>
-                            {new Date().getFullYear()} © Velzon.
-                        </Col>
-                        <Col sm={6}>
-                            <div className="text-sm-end d-none d-sm-block">
-                                Design & Develop by Themesbrand
-                            </div>
+                        <Col sm={12}>
+                            {new Date().getFullYear()} © Emissor NFS-e
                         </Col>
                     </Row>
                 </Container>

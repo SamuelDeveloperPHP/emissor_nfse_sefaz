@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmitenteController;
+use App\Http\Controllers\LoteController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
@@ -37,6 +39,15 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile-update', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile-destroy', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware('permission:dashboard.view')
+        ->name('dashboard');
+
+    Route::get('lotes', [LoteController::class, 'index'])->middleware('permission:lotes-emissao.view')->name('lotes.index');
+    Route::get('lotes/modelo', [LoteController::class, 'modelo'])->middleware('permission:lotes-emissao.view')->name('lotes.modelo');
+    Route::post('lotes', [LoteController::class, 'store'])->middleware('permission:lotes-emissao.create')->name('lotes.store');
+    Route::get('lotes/{lote}', [LoteController::class, 'show'])->middleware('permission:lotes-emissao.view')->name('lotes.show');
+
     // orders crud
     Route::get("/apps-ecommerce-orders", [OrderController::class, 'index'])->name('order-list');
     Route::post("order-create", [OrderController::class, 'store'])->name('order-create');
@@ -47,10 +58,8 @@ Route::middleware('auth')->group(function () {
 
         // dashboard routes
         // Route::inertia('/', 'Dashboard')->name('index');
-        Route::get("/dashboard", "index");
         Route::get("/dashboard-analytics", "dashboard_analytics");
         Route::get("/dashboard-crm", "dashboard_crm");
-        Route::get("/dashboard", "dashboard");
         Route::get("/dashboard-crypto", "dashboard_crypto");
         Route::get("/dashboard-projects", "dashboard_projects");
         Route::get("/dashboard-nft", "dashboard_nft");

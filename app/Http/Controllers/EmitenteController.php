@@ -14,11 +14,7 @@ class EmitenteController extends Controller
     {
         $this->authorize('viewAny', Emitente::class);
 
-        $query = Emitente::query();
-
-        if (! $request->user()->all_emitentes) {
-            $query->whereRelation('users', 'users.id', $request->user()->id);
-        }
+        $query = Emitente::query()->visibleTo($request->user());
 
         return Inertia::render('Fiscal/Emitentes/index', [
             'emitentes' => $query->orderBy('razao_social')->get()->map(fn (Emitente $emitente) => [
@@ -89,7 +85,7 @@ class EmitenteController extends Controller
             'telefone' => ['nullable', 'string', 'max:20'],
             'regime_tributario' => ['nullable', 'string', 'max:30'],
             'ambiente' => ['required', Rule::in(['homologacao', 'producao'])],
-            'driver' => ['required', Rule::in(['adn_nacional', 'prefeitura_legada', 'gateway'])],
+            'driver' => ['required', Rule::in(['adn_nacional', 'prefeitura_legada', 'gateway', 'simulador'])],
             'driver_config' => ['nullable', 'array'],
             'certificado' => ['nullable', 'file', 'max:4096', 'mimes:pfx,p12'],
             'certificado_password' => ['nullable', 'string'],

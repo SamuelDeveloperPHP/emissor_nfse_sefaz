@@ -1,5 +1,5 @@
 import { Link } from "@inertiajs/react";
-import React, { useState } from "react";
+import React from "react";
 
 //import images
 import logoSm from "../../images/logo-sm.png";
@@ -7,16 +7,10 @@ import logoDark from "../../images/logo-dark.png";
 import logoLight from "../../images/logo-light.png";
 import { useDispatch, useSelector } from "react-redux";
 import { createSelector } from "@reduxjs/toolkit";
-import { Dropdown, Form } from "react-bootstrap";
 import { changeSidebarVisibility } from "../slices/thunk";
-import SearchOption from "../Components/Common/SearchOption";
-import LanguageDropdown from "../Components/Common/LanguageDropdown";
-import WebAppsDropdown from "../Components/Common/WebAppsDropdown";
-import MyCartDropdown from "../Components/Common/MyCartDropdown";
 import FullScreenDropdown from "../Components/Common/FullScreenDropdown";
 import ProfileDropdown from "../Components/Common/ProfileDropdown";
 import LightDark from "../Components/Common/LightDark";
-import NotificationDropdown from "../Components/Common/NotificationDropdown";
 
 const Header = ({ onChangeLayoutMode, layoutModeType, headerClass }: any) => {
     const dispatch: any = useDispatch();
@@ -29,11 +23,6 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass }: any) => {
     // Inside your component
     const sidebarVisibilitytype = useSelector(selectDashboardData);
 
-
-    const [search, setSearch] = useState<boolean>(false);
-    const toogleSearch = () => {
-        setSearch(!search);
-    };
 
     const toogleMenuBtn = () => {
         var windowSize = document.documentElement.clientWidth;
@@ -107,51 +96,15 @@ const Header = ({ onChangeLayoutMode, layoutModeType, headerClass }: any) => {
                                     <span></span>
                                 </span>
                             </button>
-
-
-                            <SearchOption />
                         </div>
 
                         <div className="d-flex align-items-center">
-
-                            <Dropdown show={search} onClick={toogleSearch} className="d-md-none topbar-head-dropdown header-item">
-                                <Dropdown.Toggle type="button" as="button" className="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle">
-                                    <i className="bx bx-search fs-22"></i>
-                                </Dropdown.Toggle>
-                                <Dropdown.Menu className="dropdown-menu-lg dropdown-menu-end p-0">
-                                    <Form className="p-3">
-                                        <div className="form-group m-0">
-                                            <div className="input-group">
-                                                <input type="text" className="form-control" placeholder="Search ..."
-                                                    aria-label="Recipient's username" />
-                                                <button className="btn btn-primary" type="submit"><i
-                                                    className="mdi mdi-magnify"></i></button>
-                                            </div>
-                                        </div>
-                                    </Form>
-                                </Dropdown.Menu>
-                            </Dropdown>
-
-                            {/* LanguageDropdown */}
-                            <LanguageDropdown />
-
-                            {/* WebAppsDropdown */}
-                            <WebAppsDropdown />
-
-                            {/* MyCartDropdwon */}
-                            <MyCartDropdown />
-
-                            {/* FullScreenDropdown */}
                             <FullScreenDropdown />
 
-                            {/* Dark/Light Mode set */}
                             <LightDark
                                 layoutMode={layoutModeType}
                                 onChangeLayoutMode={onChangeLayoutMode}
                             />
-
-                            {/* NotificationDropdown */}
-                            <NotificationDropdown />
 
                             {/* ProfileDropdown */}
                             <ProfileDropdown />

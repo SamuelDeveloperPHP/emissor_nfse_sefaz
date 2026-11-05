@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Emitente extends Model
 {
@@ -65,9 +66,21 @@ class Emitente extends Model
         return $this->belongsToMany(User::class, 'emitente_user');
     }
 
+    public function notasFiscais(): HasMany
+    {
+        return $this->hasMany(NotaFiscal::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeVisibleTo($query, User $user)
+    {
+        return $user->all_emitentes
+            ? $query
+            : $query->whereRelation('users', 'users.id', $user->id);
     }
 
     public function certificadoProximoDoVencimento(int $dias = 30): bool

@@ -142,6 +142,7 @@ const EmitentesIndex = (props: any) => {
   return (
     <Layout>
       <Head title="Emitentes" />
+      <div className="page-content">
       <Container fluid>
         <BreadCrumb title="Emitentes" pageTitle="Fiscal" />
         <Row>
@@ -222,6 +223,7 @@ const EmitentesIndex = (props: any) => {
           </Col>
         </Row>
       </Container>
+      </div>
 
       <Modal show={showModal} onHide={() => setShowModal(false)} centered size="lg">
         <Form onSubmit={handleSubmit}>
@@ -331,6 +333,7 @@ const EmitentesIndex = (props: any) => {
                   <option value="adn_nacional">NFS-e Nacional (ADN)</option>
                   <option value="prefeitura_legada">Prefeitura legada</option>
                   <option value="gateway">Gateway comercial</option>
+                  <option value="simulador">Simulador local (sem emissão real)</option>
                 </Form.Select>
               </Col>
               <Col md={2}>

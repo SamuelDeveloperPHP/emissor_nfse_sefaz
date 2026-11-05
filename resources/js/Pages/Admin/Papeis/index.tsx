@@ -122,6 +122,7 @@ const PapeisIndex = (props: any) => {
   return (
     <Layout>
       <Head title="Papéis & Permissões" />
+      <div className="page-content">
       <Container fluid>
         <BreadCrumb title="Papéis & Permissões" pageTitle="Administração" />
         <Row>
@@ -243,6 +244,7 @@ const PapeisIndex = (props: any) => {
           </Col>
         </Row>
       </Container>
+      </div>
 
       <Modal show={showRoleModal} onHide={() => setShowRoleModal(false)} centered>
         <Form onSubmit={createRole}>

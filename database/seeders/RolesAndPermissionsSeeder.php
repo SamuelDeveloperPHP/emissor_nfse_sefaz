@@ -18,7 +18,8 @@ class RolesAndPermissionsSeeder extends Seeder
         Artisan::call('modules:sync-permissions');
 
         $admin = Role::firstOrCreate(['name' => 'Administrador', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'Operador', 'guard_name' => 'web']);
+        $operador = Role::firstOrCreate(['name' => 'Operador', 'guard_name' => 'web']);
+        $operador->givePermissionTo('dashboard.view');
 
         // The Gate::before bypass already gives Administrador everything, but syncing
         // the permissions too keeps the permission-matrix screen showing it as fully checked.

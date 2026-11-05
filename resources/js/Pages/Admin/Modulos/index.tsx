@@ -105,6 +105,7 @@ const ModulosIndex = (props: any) => {
   return (
     <Layout>
       <Head title="Módulos" />
+      <div className="page-content">
       <Container fluid>
         <BreadCrumb title="Módulos" pageTitle="Administração" />
         <Row>
@@ -166,6 +167,7 @@ const ModulosIndex = (props: any) => {
           </Col>
         </Row>
       </Container>
+      </div>
 
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
         <Form onSubmit={handleSubmit}>

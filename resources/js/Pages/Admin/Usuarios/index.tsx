@@ -113,6 +113,7 @@ const UsuariosIndex = (props: any) => {
   return (
     <Layout>
       <Head title="Usuários" />
+      <div className="page-content">
       <Container fluid>
         <BreadCrumb title="Usuários" pageTitle="Administração" />
         <Row>
@@ -170,6 +171,7 @@ const UsuariosIndex = (props: any) => {
           </Col>
         </Row>
       </Container>
+      </div>
 
       <Modal show={showModal} onHide={() => setShowModal(false)} centered size="lg">
         <Form onSubmit={handleSubmit}>

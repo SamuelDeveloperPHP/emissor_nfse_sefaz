@@ -11,11 +11,18 @@ class ModulesSeeder extends Seeder
      * Seed the core modules that make up the sidebar.
      *
      * "Administração" and "Fiscal" are pure groupings (no route of their own).
-     * "Lotes de Emissão", "Notas Fiscais" and "Monitoramento" are registered but
-     * inactive — their screens belong to the batch-emission phase, not this one.
+     * "Notas Fiscais" and "Monitoramento" are registered but inactive — their screens
+     * belong to a later step of the batch-emission phase.
      */
     public function run(): void
     {
+        Module::updateOrCreate(['key' => 'dashboard'], [
+            'name' => 'Painel',
+            'icon' => 'bx bx-bar-chart-alt-2',
+            'route' => 'dashboard',
+            'order' => 1,
+        ]);
+
         $administracao = Module::updateOrCreate(['key' => 'administracao'], [
             'name' => 'Administração',
             'icon' => 'bx bx-cog',
@@ -63,9 +70,10 @@ class ModulesSeeder extends Seeder
         Module::updateOrCreate(['key' => 'lotes-emissao'], [
             'name' => 'Lotes de Emissão',
             'icon' => 'bx bx-upload',
+            'route' => 'lotes.index',
             'parent_id' => $fiscal->id,
             'order' => 12,
-            'is_active' => false,
+            'is_active' => true,
             'actions' => ['emitir', 'cancelar'],
         ]);
 

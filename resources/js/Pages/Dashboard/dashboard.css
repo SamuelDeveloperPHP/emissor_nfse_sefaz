@@ -1,0 +1,187 @@
+.fiscal {
+  --fiscal-autorizada: #1f8a5b;
+  --fiscal-pendente: #e0a526;
+  --fiscal-rejeitada: #c8452f;
+  --fiscal-cancelada: #6b778c;
+  --fiscal-ativo: var(--vz-primary, #405189);
+  --fiscal-inativo: #b4bccb;
+}
+
+.fiscal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.fiscal-head h4 {
+  margin: 0;
+}
+
+.fiscal-head__stamp {
+  color: var(--vz-secondary-color, #878a99);
+  font-size: 0.8125rem;
+}
+
+/* Period selector: the four cards are the page's controls and its headline numbers. */
+.fiscal-periods {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.fiscal-period {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 1rem 1.125rem 1.125rem;
+  text-align: left;
+  color: var(--vz-body-color);
+  background: var(--vz-card-bg, #fff);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-top: 3px solid var(--vz-border-color, #e9ebec);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.fiscal-period:hover {
+  border-color: var(--vz-primary, #405189);
+}
+
+.fiscal-period:focus-visible {
+  outline: 2px solid var(--vz-primary, #405189);
+  outline-offset: 2px;
+}
+
+.fiscal-period[aria-pressed='true'] {
+  border-color: var(--vz-primary, #405189);
+  border-top-color: var(--vz-primary, #405189);
+  background: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.06);
+}
+
+.fiscal-period__name {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.fiscal-period__range {
+  color: var(--vz-secondary-color, #878a99);
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.fiscal-period__total {
+  margin-top: 0.625rem;
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.fiscal-period__total small {
+  margin-left: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--vz-secondary-color, #878a99);
+}
+
+.fiscal-period__meta {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--vz-secondary-color, #878a99);
+}
+
+.fiscal-period__bar {
+  display: flex;
+  height: 6px;
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--vz-border-color, #e9ebec);
+}
+
+.fiscal-period__bar span {
+  display: block;
+  height: 100%;
+}
+
+.fiscal-chart {
+  position: relative;
+  height: 320px;
+}
+
+.fiscal-chart--short {
+  height: 260px;
+}
+
+.fiscal-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  height: 100%;
+  min-height: 160px;
+  padding: 1rem;
+  text-align: center;
+  color: var(--vz-secondary-color, #878a99);
+}
+
+.fiscal-empty strong {
+  color: var(--vz-body-color);
+}
+
+.fiscal-certs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fiscal-certs li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--vz-border-color, #e9ebec);
+}
+
+.fiscal-certs li:last-child {
+  border-bottom: 0;
+}
+
+.fiscal-certs__name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fiscal-certs__date {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--vz-secondary-color, #878a99);
+}
+
+@media (max-width: 1199.98px) {
+  .fiscal-periods {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .fiscal-periods {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .fiscal-chart {
+    height: 280px;
+  }
+}
