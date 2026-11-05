@@ -100,6 +100,66 @@ class LoteController extends Controller
         ]);
     }
 
+    public function emitir(Request $request)
+    {
+        return Inertia::render('Fiscal/Lotes/emitir', [
+            'emitentes' => Emitente::query()
+                ->visibleTo($request->user())
+                ->active()
+                ->orderBy('razao_social')
+                ->get(['id', 'razao_social', 'cnpj', 'driver']),
+        ]);
+    }
+
+    public function emitirStore(Request $request, LoteImporter $importer)
+    {
+        $dados = $request->validate([
+            'emitente_id' => ['required', 'integer', 'exists:emitentes,id'],
+            'tomador_documento' => ['required', 'string', 'max:20'],
+            'tomador_nome' => ['required', 'string', 'max:300'],
+            'tomador_email' => ['nullable', 'email', 'max:80'],
+            'descricao_servico' => ['required', 'string', 'max:2000'],
+            'codigo_tributacao_nacional' => ['required', 'string', 'max:10'],
+            'valor_servico' => ['required', 'string', 'max:20'],
+            'aliquota_iss' => ['nullable', 'string', 'max:10'],
+            'iss_retido' => ['boolean'],
+            'data_competencia' => ['nullable', 'string', 'max:10'],
+        ]);
+
+        $emitente = Emitente::findOrFail($dados['emitente_id']);
+
+        abort_unless($request->user()->canAccessEmitente($emitente), 403);
+
+        if (! $emitente->is_active) {
+            return back()->withErrors(['emitente_id' => 'Este emitente está inativo.']);
+        }
+
+        $linha = [
+            ...collect($dados)->except(['emitente_id', 'iss_retido'])->map(fn ($valor) => (string) $valor)->all(),
+            'iss_retido' => ! empty($dados['iss_retido']) ? '1' : '0',
+        ];
+
+        [, $erros] = $importer->normalizar($linha);
+        if ($erros) {
+            return back()->withErrors(['nota' => $erros])->withInput();
+        }
+
+        $lote = $importer->importarLinha($emitente, $request->user(), $linha);
+
+        ProcessarLoteJob::dispatchSync($lote);
+
+        $lote->refresh();
+
+        return redirect()->route('lotes.show', $lote)->with(
+            $lote->status === Lote::STATUS_CONCLUIDO_COM_ERROS ? 'error' : 'success',
+            match ($lote->status) {
+                Lote::STATUS_CONCLUIDO => 'Nota processada.',
+                Lote::STATUS_AGUARDANDO_TRANSMISSAO => 'DPS gerada e validada; a transmissão ainda não está disponível para o driver deste emitente.',
+                default => 'A nota foi rejeitada; veja os motivos abaixo.',
+            }
+        );
+    }
+
     public function modelo()
     {
         return response(LoteImporter::modeloCsv(), 200, [

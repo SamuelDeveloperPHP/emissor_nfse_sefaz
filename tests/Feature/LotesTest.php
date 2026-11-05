@@ -195,6 +195,73 @@ class LotesTest extends TestCase
         );
     }
 
+    private function notaIndividual(Emitente $emitente, array $override = []): array
+    {
+        return array_merge([
+            'emitente_id' => $emitente->id,
+            'tomador_documento' => '123.456.789-09',
+            'tomador_nome' => 'Maria da Silva',
+            'tomador_email' => 'maria@exemplo.com.br',
+            'descricao_servico' => 'Consultoria contábil',
+            'codigo_tributacao_nacional' => '171901',
+            'valor_servico' => '1.500,00',
+            'aliquota_iss' => '2,00',
+            'iss_retido' => false,
+            'data_competencia' => '2026-11-05',
+        ], $override);
+    }
+
+    public function test_single_note_is_issued_through_the_same_pipeline(): void
+    {
+        $emitente = $this->emitente();
+
+        $response = $this->actingAs(User::where('email', 'admin@example.com')->first())
+            ->post(route('lotes.emitir.store'), $this->notaIndividual($emitente));
+
+        $lote = Lote::first();
+        $response->assertRedirect(route('lotes.show', $lote));
+
+        $this->assertSame('Emissão individual', $lote->arquivo);
+        $this->assertSame(Lote::STATUS_CONCLUIDO, $lote->status);
+
+        $nota = $lote->notas()->first();
+        $this->assertSame(NotaFiscal::STATUS_AUTORIZADA, $nota->status);
+        $this->assertSame('1', $nota->numero);
+        $this->assertSame(1500.0, (float) $nota->valor_servicos);
+        $this->assertSame('12345678909', $nota->payload['tomador_documento']);
+    }
+
+    public function test_single_note_with_invalid_data_shows_the_errors_and_creates_nothing(): void
+    {
+        $emitente = $this->emitente();
+
+        $this->actingAs(User::where('email', 'admin@example.com')->first())
+            ->post(route('lotes.emitir.store'), $this->notaIndividual($emitente, ['tomador_documento' => '123', 'codigo_tributacao_nacional' => '12']))
+            ->assertSessionHasErrors('nota');
+
+        $this->assertSame(0, Lote::count());
+    }
+
+    public function test_single_note_requires_the_emitir_permission_and_emitente_access(): void
+    {
+        $permitido = $this->emitente('11222333000181');
+        $bloqueado = $this->emitente('11444777000161');
+
+        $operador = User::factory()->create(['all_emitentes' => false]);
+        $operador->syncRoles(['Operador']);
+        $operador->emitentes()->attach($permitido->id);
+
+        $this->actingAs($operador)->get(route('lotes.emitir'))->assertForbidden();
+
+        $operador->givePermissionTo('lotes-emissao.emitir');
+
+        $this->get(route('lotes.emitir'))->assertOk()->assertInertia(
+            fn ($page) => $page->component('Fiscal/Lotes/emitir')->has('emitentes', 1)
+        );
+        $this->post(route('lotes.emitir.store'), $this->notaIndividual($bloqueado))->assertForbidden();
+        $this->assertSame(0, Lote::count());
+    }
+
     public function test_csv_template_downloads(): void
     {
         $this->actingAs(User::where('email', 'admin@example.com')->first())

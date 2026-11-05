@@ -51,6 +51,21 @@ class LoteImporter
             ]);
         }
 
+        return $this->criarLote($emitente, $user, $linhas, $nomeArquivo);
+    }
+
+    /**
+     * Single-note emission: a lote of one line, so it goes through the same pipeline.
+     *
+     * @param  array<string, string>  $linha
+     */
+    public function importarLinha(Emitente $emitente, ?User $user, array $linha, string $nome = 'Emissão individual'): Lote
+    {
+        return $this->criarLote($emitente, $user, [1 => $linha], $nome);
+    }
+
+    private function criarLote(Emitente $emitente, ?User $user, array $linhas, string $nomeArquivo): Lote
+    {
         return DB::transaction(function () use ($emitente, $user, $linhas, $nomeArquivo) {
             $lote = Lote::create([
                 'emitente_id' => $emitente->id,
@@ -143,7 +158,7 @@ class LoteImporter
     /**
      * @return array{0: array<string, mixed>, 1: array<int, string>}
      */
-    private function normalizar(array $linha): array
+    public function normalizar(array $linha): array
     {
         $erros = [];
 
