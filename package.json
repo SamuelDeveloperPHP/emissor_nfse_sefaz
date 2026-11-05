@@ -1,0 +1,114 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@headlessui/react": "^2.1.10",
+    "@inertiajs/react": "^1.2.0",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "axios": "^1.7.7",
+    "laravel-vite-plugin": "^1.0.5",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  },
+  "dependencies": {
+    "@ckeditor/ckeditor5-build-classic": "^43.2.0",
+    "@ckeditor/ckeditor5-react": "^9.3.1",
+    "@fullcalendar/bootstrap": "^6.1.15",
+    "@fullcalendar/core": "^6.1.15",
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/list": "^6.1.15",
+    "@fullcalendar/multimonth": "^6.1.15",
+    "@fullcalendar/react": "^6.1.15",
+    "@inertiajs/inertia": "^0.11.1",
+    "@react-google-maps/api": "^2.20.3",
+    "@reduxjs/toolkit": "^2.3.0",
+    "@south-paw/react-vector-maps": "^3.2.0",
+    "@tanstack/match-sorter-utils": "^8.19.4",
+    "@tanstack/react-table": "^8.20.5",
+    "@testing-library/jest-dom": "^6.6.2",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@vtaits/react-color-picker": "^1.0.2",
+    "aos": "^2.3.4",
+    "apexcharts": "^4.7.0",
+    "axios-mock-adapter": "^2.1.0",
+    "bootstrap": "5.3.7",
+    "chart.js": "^4.4.5",
+    "cleave.js": "^1.6.0",
+    "echarts": "^5.5.1",
+    "echarts-for-react": "^3.0.2",
+    "emoji-picker-react": "^4.12.0",
+    "feather-icons-react": "^0.7.0",
+    "filepond": "^4.31.4",
+    "filepond-plugin-image-exif-orientation": "^1.0.11",
+    "filepond-plugin-image-preview": "^4.6.12",
+    "formik": "^2.4.6",
+    "i18next": "^23.16.2",
+    "i18next-browser-languagedetector": "^8.0.0",
+    "moment": "^2.30.1",
+    "nouislider-react": "^3.4.2",
+    "prismjs": "^1.29.0",
+    "react-apexcharts": "1.4.1",
+    "react-beautiful-dnd": "^13.1.1",
+    "react-bootstrap": "^2.10.5",
+    "react-chartjs-2": "^5.2.0",
+    "react-color": "^2.19.3",
+    "react-countdown": "^2.3.6",
+    "react-countup": "^6.5.3",
+    "react-csv": "^2.2.2",
+    "react-dragula": "^1.1.17",
+    "react-dropzone": "^14.2.10",
+    "react-dual-listbox": "^6.0.3",
+    "react-filepond": "^7.1.2",
+    "react-flatpickr": "^3.10.13",
+    "react-i18next": "^15.0.3",
+    "react-masonry-css": "^1.0.16",
+    "react-perfect-scrollbar": "^1.5.8",
+    "react-rating": "^2.0.5",
+    "react-redux": "^9.1.2",
+    "react-responsive-carousel": "^3.2.23",
+    "react-scrollspy": "^3.4.3",
+    "react-select": "^5.8.1",
+    "react-table": "^7.8.0",
+    "react-toastify": "^10.0.6",
+    "redux": "^5.0.1",
+    "sass": "1.69.7",
+    "simplebar-react": "^3.2.6",
+    "swiper": "^11.1.14",
+    "yup": "^1.4.0"
+  },
+  "overrides": {
+    "@vtaits/react-color-picker": {
+      "react": "^19.1.0",
+      "react-dom": "^19.1.0"
+    },
+    "feather-icons-react": {
+      "react": "^19.1.0",
+      "react-dom": "^19.1.0"
+    },
+    "react-dual-listbox": {
+      "react": "^19.1.0",
+      "react-dom": "^19.1.0"
+    },
+    "react-flatpickr": {
+      "react": "^19.1.0",
+      "react-dom": "^19.1.0"
+    },
+    "react-table": {
+      "react": "^19.1.0",
+      "react-dom": "^19.1.0"
+    },
+    "react-beautiful-dnd": {
+      "react": "^19.1.0",
+      "react-dom": "^19.1.0"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+declare module 'reselect';
+declare module 'react-table';
+declare module 'prismjs';
+declare module 'react-flatpickr';
+declare module 'react-csv';
+declare module 'feather-icons-react';
+declare module 'react-countup';
+declare module 'react-masonry-css';
+declare module 'react-dual-listbox';
+declare module '@vtaits/react-color-picker';
+declare module 'react-color';
+declare module 'react-rating';
+declare module 'cleave.js/react';
+declare module 'moment';
+declare module 'react-apexcharts';
+declare module 'react-scrollspy';
+declare module 'react-dragula';

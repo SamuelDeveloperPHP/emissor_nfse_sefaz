@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
+class Emitente extends Model
+{
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'razao_social',
+        'nome_fantasia',
+        'cnpj',
+        'inscricao_municipal',
+        'codigo_municipio',
+        'municipio',
+        'uf',
+        'cep',
+        'logradouro',
+        'numero',
+        'complemento',
+        'bairro',
+        'email',
+        'telefone',
+        'regime_tributario',
+        'ambiente',
+        'driver',
+        'driver_config',
+        'certificado_path',
+        'certificado_password',
+        'certificado_validade',
+        'rps_serie',
+        'rps_numero_atual',
+        'is_active',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'certificado_password',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'driver_config' => 'array',
+        'certificado_password' => 'encrypted',
+        'certificado_validade' => 'date',
+        'is_active' => 'boolean',
+    ];
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'emitente_user');
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function certificadoProximoDoVencimento(int $dias = 30): bool
+    {
+        return $this->certificado_validade !== null
+            && now()->diffInDays($this->certificado_validade, false) <= $dias;
+    }
+}

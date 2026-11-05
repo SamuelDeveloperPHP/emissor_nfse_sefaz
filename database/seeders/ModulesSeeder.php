@@ -1,0 +1,89 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Module;
+use Illuminate\Database\Seeder;
+
+class ModulesSeeder extends Seeder
+{
+    /**
+     * Seed the core modules that make up the sidebar.
+     *
+     * "Administração" and "Fiscal" are pure groupings (no route of their own).
+     * "Lotes de Emissão", "Notas Fiscais" and "Monitoramento" are registered but
+     * inactive — their screens belong to the batch-emission phase, not this one.
+     */
+    public function run(): void
+    {
+        $administracao = Module::updateOrCreate(['key' => 'administracao'], [
+            'name' => 'Administração',
+            'icon' => 'bx bx-cog',
+            'order' => 90,
+        ]);
+
+        Module::updateOrCreate(['key' => 'modulos'], [
+            'name' => 'Módulos',
+            'icon' => 'bx bx-collection',
+            'route' => 'modules.index',
+            'parent_id' => $administracao->id,
+            'order' => 91,
+        ]);
+
+        Module::updateOrCreate(['key' => 'papeis-permissoes'], [
+            'name' => 'Papéis & Permissões',
+            'icon' => 'bx bx-lock-alt',
+            'route' => 'roles.index',
+            'parent_id' => $administracao->id,
+            'order' => 92,
+        ]);
+
+        Module::updateOrCreate(['key' => 'usuarios'], [
+            'name' => 'Usuários',
+            'icon' => 'bx bx-user',
+            'route' => 'users.index',
+            'parent_id' => $administracao->id,
+            'order' => 93,
+        ]);
+
+        $fiscal = Module::updateOrCreate(['key' => 'fiscal'], [
+            'name' => 'Fiscal',
+            'icon' => 'bx bx-receipt',
+            'order' => 10,
+        ]);
+
+        Module::updateOrCreate(['key' => 'emitentes'], [
+            'name' => 'Emitentes',
+            'icon' => 'bx bx-briefcase-alt',
+            'route' => 'emitentes.index',
+            'parent_id' => $fiscal->id,
+            'order' => 11,
+        ]);
+
+        Module::updateOrCreate(['key' => 'lotes-emissao'], [
+            'name' => 'Lotes de Emissão',
+            'icon' => 'bx bx-upload',
+            'parent_id' => $fiscal->id,
+            'order' => 12,
+            'is_active' => false,
+            'actions' => ['emitir', 'cancelar'],
+        ]);
+
+        Module::updateOrCreate(['key' => 'notas-fiscais'], [
+            'name' => 'Notas Fiscais',
+            'icon' => 'bx bx-file',
+            'parent_id' => $fiscal->id,
+            'order' => 13,
+            'is_active' => false,
+            'actions' => ['cancelar'],
+        ]);
+
+        Module::updateOrCreate(['key' => 'monitoramento'], [
+            'name' => 'Monitoramento',
+            'icon' => 'bx bx-pulse',
+            'parent_id' => $fiscal->id,
+            'order' => 14,
+            'is_active' => false,
+        ]);
+    }
+}
