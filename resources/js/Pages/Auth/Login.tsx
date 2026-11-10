@@ -137,6 +137,9 @@ export default function Login({ status, canResetPassword }: any) {
                     </button>
 
                     <p className="lg-help">Ainda não tem acesso? Peça ao administrador do seu escritório para criar o seu usuário.</p>
+                    <p className="lg-help">
+                        Quer conhecer o sistema antes? <a href="/treinamento" className="lg-link">Abra o treinamento interativo</a>.
+                    </p>
                 </form>
             </main>
         </div>

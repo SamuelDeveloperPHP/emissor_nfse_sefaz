@@ -41,6 +41,9 @@ use Inertia\Inertia;
 
 // Route::get("/apps-ecommerce-orders", [ProfileController::class, 'index'])->name('order-list');
 Route::redirect('/', '/dashboard');
+
+// Treinamento: página pública (sem login), para o contador aprender antes de ter acesso.
+Route::inertia('/treinamento', 'Treinamento/index')->name('treinamento');
 Route::middleware('auth')->group(function () {
     Route::get('/profile-edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile-update', [ProfileController::class, 'update'])->name('profile.update');
