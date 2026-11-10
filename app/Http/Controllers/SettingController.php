@@ -40,6 +40,7 @@ class SettingController extends Controller
                     'cnpj' => $e->cnpj,
                     'is_active' => $e->is_active,
                     'driver' => $e->driver,
+                    'modo_certificado' => $e->modo_certificado,
                     'tem_certificado' => filled($e->certificado_path),
                     'validade' => $e->certificado_validade?->format('d/m/Y'),
                     'dias' => $e->certificado_validade ? (int) $hoje->diffInDays($e->certificado_validade->copy()->startOfDay(), false) : null,

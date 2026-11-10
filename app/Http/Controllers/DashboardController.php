@@ -43,6 +43,7 @@ class DashboardController extends Controller
 
         $semCertificado = (clone $emitentes)
             ->where('is_active', true)
+            ->where('modo_certificado', Emitente::CERTIFICADO_PROPRIO)
             ->whereNull('certificado_path')
             ->count();
 

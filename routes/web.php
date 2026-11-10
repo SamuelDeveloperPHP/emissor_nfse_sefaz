@@ -313,6 +313,7 @@ Route::middleware('auth')->group(function () {
 
     // emitentes: cada ação também passa pela EmitentePolicy (permissão do módulo + escopo por emitente)
     Route::get('/emitentes', [EmitenteController::class, 'index'])->name('emitentes.index');
+    Route::get('/emitentes/consultar-cnpj/{cnpj}', [EmitenteController::class, 'consultarCnpj'])->name('emitentes.consultar-cnpj');
     Route::post('/emitentes', [EmitenteController::class, 'store'])->name('emitentes.store');
     Route::put('/emitentes/{emitente}', [EmitenteController::class, 'update'])->name('emitentes.update');
     Route::delete('/emitentes/{emitente}', [EmitenteController::class, 'destroy'])->name('emitentes.destroy');

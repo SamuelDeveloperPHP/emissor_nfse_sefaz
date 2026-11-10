@@ -9,6 +9,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Emitente extends Model
 {
+    /** The emitente signs with its own A1 certificate. */
+    public const CERTIFICADO_PROPRIO = 'certificado';
+
+    /** The office's certificate ("Certificado do sistema") acts for the emitente under an electronic procuração held at the Receita Federal. */
+    public const CERTIFICADO_PROCURACAO = 'procuracao';
+
+    public const MODOS_CERTIFICADO = [self::CERTIFICADO_PROPRIO, self::CERTIFICADO_PROCURACAO];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -33,6 +41,7 @@ class Emitente extends Model
         'ambiente',
         'driver',
         'driver_config',
+        'modo_certificado',
         // Set only by GestaoDeCertificado (and tests); no controller passes request data into them.
         'certificado_path',
         'certificado_password',
@@ -91,6 +100,11 @@ class Emitente extends Model
         return $user->all_emitentes
             ? $query
             : $query->whereRelation('users', 'users.id', $user->id);
+    }
+
+    public function emitePorProcuracao(): bool
+    {
+        return $this->modo_certificado === self::CERTIFICADO_PROCURACAO;
     }
 
     public function certificadoProximoDoVencimento(int $dias = 30): bool

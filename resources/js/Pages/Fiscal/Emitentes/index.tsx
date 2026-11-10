@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { Button, Card, Col, Container, Form, Modal, Row, Table } from "react-bootstrap";
 import { Head, Link, router, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
 import { avisarCamposInvalidos, confirmarExclusao, useFlashAlert } from "../../../common/alerta";
 import BreadCrumb from "../../../Components/Common/BreadCrumb";
 import { Can } from "../../../common/usePermission";
+import { cnpjValido, mascararCep, mascararCnpj, mascararTelefone, sanitizarCnpj, somenteDigitos } from "../../../common/mascaras";
 
 interface EmitenteRow {
   id: number;
@@ -25,6 +27,7 @@ interface EmitenteRow {
   regime_tributario: string | null;
   ambiente: string;
   driver: string;
+  modo_certificado: string;
   certificado_validade: string | null;
   certificado_proximo_do_vencimento: boolean;
   tem_certificado: boolean;
@@ -52,25 +55,29 @@ const emptyForm = {
   regime_tributario: "",
   ambiente: "homologacao",
   driver: "adn_nacional",
+  modo_certificado: "certificado",
   rps_serie: "",
   rps_numero_atual: 0,
   is_active: true,
 };
 
-const formatCnpj = (cnpj: string) =>
-  cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-
 const EmitentesIndex = (props: any) => {
   const emitentes = props.emitentes as EmitenteRow[];
 
   const [showModal, setShowModal] = useState(false);
+  const [consultandoCnpj, setConsultandoCnpj] = useState(false);
+  const [consultaCnpj, setConsultaCnpj] = useState("");
+  const [ultimoCnpjConsultado, setUltimoCnpjConsultado] = useState("");
 
-  const { data, setData, post, put, processing, errors, reset, transform } = useForm(emptyForm);
+  const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm(emptyForm);
 
   useFlashAlert();
 
   const openCreate = () => {
     reset();
+    clearErrors();
+    setConsultaCnpj("");
+    setUltimoCnpjConsultado("");
     setShowModal(true);
   };
 
@@ -94,12 +101,56 @@ const EmitentesIndex = (props: any) => {
       regime_tributario: emitente.regime_tributario ?? "",
       ambiente: emitente.ambiente,
       driver: emitente.driver,
+      modo_certificado: emitente.modo_certificado ?? "certificado",
       rps_serie: emitente.rps_serie ?? "",
       rps_numero_atual: emitente.rps_numero_atual,
       is_active: emitente.is_active,
     });
+    clearErrors();
+    setConsultaCnpj("");
+    setUltimoCnpjConsultado(sanitizarCnpj(emitente.cnpj));
     setShowModal(true);
   };
+
+  const consultarCnpj = async (cnpjInformado = data.cnpj) => {
+    const cnpj = sanitizarCnpj(cnpjInformado);
+    if (!cnpjValido(cnpj) || consultandoCnpj || cnpj === ultimoCnpjConsultado) return;
+
+    setConsultandoCnpj(true);
+    setConsultaCnpj("Consultando os dados cadastrais...");
+    try {
+      const resposta = await axios.get(route("emitentes.consultar-cnpj", cnpj));
+      const cadastro = resposta.data;
+      setData({
+        ...data,
+        cnpj,
+        razao_social: cadastro.razao_social || data.razao_social,
+        nome_fantasia: cadastro.nome_fantasia || data.nome_fantasia,
+        cep: cadastro.cep || data.cep,
+        logradouro: cadastro.logradouro || data.logradouro,
+        numero: cadastro.numero || data.numero,
+        complemento: cadastro.complemento || data.complemento,
+        bairro: cadastro.bairro || data.bairro,
+        municipio: cadastro.municipio || data.municipio,
+        uf: cadastro.uf || data.uf,
+        email: cadastro.email || data.email,
+        telefone: cadastro.telefone || data.telefone,
+      });
+      setConsultaCnpj("Dados cadastrais preenchidos. Confira antes de salvar.");
+      setUltimoCnpjConsultado(cnpj);
+    } catch (erro: any) {
+      setConsultaCnpj(erro?.response?.data?.message || "Não foi possível consultar o CNPJ agora. Preencha os dados manualmente.");
+    } finally {
+      setConsultandoCnpj(false);
+    }
+  };
+
+  useEffect(() => {
+    const cnpj = sanitizarCnpj(data.cnpj);
+    if (!showModal || !cnpjValido(cnpj) || cnpj === ultimoCnpjConsultado) return;
+    const atraso = window.setTimeout(() => consultarCnpj(cnpj), 650);
+    return () => window.clearTimeout(atraso);
+  }, [data.cnpj, showModal, ultimoCnpjConsultado]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,7 +206,7 @@ const EmitentesIndex = (props: any) => {
                           {emitente.razao_social}
                           {emitente.nome_fantasia && <div className="text-muted small">{emitente.nome_fantasia}</div>}
                         </td>
-                        <td>{formatCnpj(emitente.cnpj)}</td>
+                        <td>{mascararCnpj(emitente.cnpj)}</td>
                         <td>
                           {emitente.municipio ? `${emitente.municipio}/${emitente.uf ?? ""}` : "—"}
                         </td>
@@ -223,12 +274,21 @@ const EmitentesIndex = (props: any) => {
               <Col md={4}>
                 <Form.Label>CNPJ</Form.Label>
                 <Form.Control
-                  value={data.cnpj}
-                  onChange={(e) => setData("cnpj", e.target.value)}
+                  value={mascararCnpj(data.cnpj)}
+                  onChange={(e) => {
+                    setData("cnpj", sanitizarCnpj(e.target.value));
+                    setConsultaCnpj("");
+                  }}
+                  onBlur={() => consultarCnpj()}
                   isInvalid={!!errors.cnpj}
-                  placeholder="Somente números"
+                  placeholder="00.000.000/0000-00"
+                  maxLength={18}
+                  autoComplete="off"
                 />
                 <Form.Control.Feedback type="invalid">{errors.cnpj}</Form.Control.Feedback>
+                <Form.Text className={consultaCnpj.startsWith("Dados") ? "text-success" : "text-muted"}>
+                  {consultandoCnpj ? "Consultando..." : consultaCnpj || "Aceita CNPJ numérico e alfanumérico."}
+                </Form.Text>
               </Col>
               <Col md={6}>
                 <Form.Label>Nome fantasia</Form.Label>
@@ -244,7 +304,7 @@ const EmitentesIndex = (props: any) => {
 
               <Col md={3}>
                 <Form.Label>Código IBGE do município</Form.Label>
-                <Form.Control value={data.codigo_municipio} onChange={(e) => setData("codigo_municipio", e.target.value)} />
+                <Form.Control value={data.codigo_municipio} maxLength={7} inputMode="numeric" onChange={(e) => setData("codigo_municipio", somenteDigitos(e.target.value, 7))} />
               </Col>
               <Col md={6}>
                 <Form.Label>Município</Form.Label>
@@ -257,7 +317,8 @@ const EmitentesIndex = (props: any) => {
 
               <Col md={2}>
                 <Form.Label>CEP</Form.Label>
-                <Form.Control value={data.cep} onChange={(e) => setData("cep", e.target.value)} />
+                <Form.Control value={mascararCep(data.cep)} inputMode="numeric" maxLength={9} onChange={(e) => setData("cep", somenteDigitos(e.target.value, 8))} isInvalid={!!errors.cep} placeholder="00000-000" />
+                <Form.Control.Feedback type="invalid">{errors.cep}</Form.Control.Feedback>
               </Col>
               <Col md={4}>
                 <Form.Label>Logradouro</Form.Label>
@@ -282,7 +343,8 @@ const EmitentesIndex = (props: any) => {
               </Col>
               <Col md={4}>
                 <Form.Label>Telefone</Form.Label>
-                <Form.Control value={data.telefone} onChange={(e) => setData("telefone", e.target.value)} />
+                <Form.Control value={mascararTelefone(data.telefone)} inputMode="tel" maxLength={15} onChange={(e) => setData("telefone", somenteDigitos(e.target.value, 11))} isInvalid={!!errors.telefone} placeholder="(00) 00000-0000" />
+                <Form.Control.Feedback type="invalid">{errors.telefone}</Form.Control.Feedback>
               </Col>
               <Col md={4}>
                 <Form.Label>Regime tributário</Form.Label>
@@ -314,6 +376,31 @@ const EmitentesIndex = (props: any) => {
                   <option value="gateway">Gateway comercial</option>
                   <option value="simulador">Simulador local (sem emissão real)</option>
                 </Form.Select>
+              </Col>
+              <Col md={12}>
+                <Form.Label>Como este emitente assina as notas</Form.Label>
+                <Form.Check
+                  type="radio"
+                  id="modo_certificado_proprio"
+                  name="modo_certificado"
+                  label="Certificado A1 do próprio emitente"
+                  checked={data.modo_certificado === "certificado"}
+                  onChange={() => setData("modo_certificado", "certificado")}
+                />
+                <Form.Check
+                  type="radio"
+                  id="modo_certificado_procuracao"
+                  name="modo_certificado"
+                  label="Procuração: o certificado do escritório emite em nome deste emitente"
+                  checked={data.modo_certificado === "procuracao"}
+                  onChange={() => setData("modo_certificado", "procuracao")}
+                />
+                <Form.Text className="text-muted">
+                  {data.modo_certificado === "procuracao"
+                    ? "Não envie o certificado deste cliente. O escritório precisa ter a procuração eletrônica ativa na Receita Federal (serviço NFS-e) e o certificado do escritório cadastrado em Configurações > Certificado do sistema."
+                    : "Envie o arquivo .pfx e a senha deste emitente em Configurações > Certificados digitais."}
+                </Form.Text>
+                {errors.modo_certificado && <div className="text-danger small">{errors.modo_certificado}</div>}
               </Col>
               <Col md={2}>
                 <Form.Label>Série RPS</Form.Label>

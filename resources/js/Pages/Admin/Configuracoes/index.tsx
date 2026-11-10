@@ -11,6 +11,7 @@ interface CertificadoRow {
   cnpj: string;
   is_active: boolean;
   driver: string;
+  modo_certificado: string;
   tem_certificado: boolean;
   validade: string | null;
   dias: number | null;
@@ -75,7 +76,7 @@ const Configuracoes = (props: any) => {
     abrir({ nome: c.razao_social, detalhe: `CNPJ ${formatarCnpj(c.cnpj)}`, url: route("certificados.store", c.id), substituindo: c.tem_certificado });
 
   const abrirEnvioSistema = () =>
-    abrir({ nome: "Certificado do sistema (escritório)", detalhe: "Guardado para uso do escritório; não assina as notas dos emitentes.", url: route("certificados.sistema.store"), substituindo: !!sistema });
+    abrir({ nome: "Certificado do sistema (escritório)", detalhe: "Usado nos emitentes que emitem por procuração.", url: route("certificados.sistema.store"), substituindo: !!sistema });
 
   const testarSistema = () => router.post(route("certificados.sistema.testar"), {}, { preserveScroll: true });
 
@@ -158,7 +159,14 @@ const Configuracoes = (props: any) => {
                               <div className="text-muted small">{formatarCnpj(c.cnpj)}</div>
                             </td>
                             <td>
-                              <SituacaoCertificado c={c} />
+                              {c.modo_certificado === "procuracao" ? (
+                                <>
+                                  <Badge bg="info">Por procuração</Badge>
+                                  <div className="text-muted small">Usa o certificado do escritório</div>
+                                </>
+                              ) : (
+                                <SituacaoCertificado c={c} />
+                              )}
                               {c.driver === "simulador" && <div className="text-muted small">Emitente em modo simulador</div>}
                             </td>
                             <td style={{ maxWidth: 280 }}>
@@ -170,10 +178,16 @@ const Configuracoes = (props: any) => {
                               {c.enviado_por && <div className="text-muted small">por {c.enviado_por}</div>}
                             </td>
                             <td className="text-end text-nowrap">
-                              <Button size="sm" variant={c.tem_certificado ? "light" : "primary"} className="me-1" onClick={() => abrirEnvio(c)}>
-                                {c.tem_certificado ? "Substituir" : "Enviar certificado"}
-                              </Button>
-                              {c.tem_certificado && (
+                              {c.modo_certificado === "procuracao" ? (
+                                <Button size="sm" variant="light" onClick={() => testar(c)}>
+                                  Testar certificado do escritório
+                                </Button>
+                              ) : (
+                                <Button size="sm" variant={c.tem_certificado ? "light" : "primary"} className="me-1" onClick={() => abrirEnvio(c)}>
+                                  {c.tem_certificado ? "Substituir" : "Enviar certificado"}
+                                </Button>
+                              )}
+                              {c.modo_certificado !== "procuracao" && c.tem_certificado && (
                                 <>
                                   <Button size="sm" variant="light" className="me-1" onClick={() => testar(c)}>
                                     Testar
@@ -202,7 +216,8 @@ const Configuracoes = (props: any) => {
                   <Alert variant="info" className="fs-14">
                     Aqui fica o e-CNPJ A1 do próprio escritório, com as mesmas proteções dos certificados dos emitentes (arquivo e senha criptografados, nada volta para a tela ou para os logs).
                     <br />
-                    <strong>Por enquanto ele só é guardado e conferido.</strong> As notas continuam sendo assinadas e transmitidas com o certificado de cada emitente.
+                    <strong>Quando é usado.</strong> Só nos emitentes marcados como "Procuração" (em Fiscal &gt; Emitentes): o escritório assina e transmite em nome deles. Cada cliente precisa ter dado a
+                    procuração eletrônica ao escritório na Receita Federal, com o serviço NFS-e. Os emitentes com certificado próprio continuam usando o A1 deles.
                   </Alert>
 
                   {sistema ? (

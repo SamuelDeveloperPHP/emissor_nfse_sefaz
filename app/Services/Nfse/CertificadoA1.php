@@ -19,8 +19,23 @@ final class CertificadoA1
     ) {
     }
 
+    /**
+     * The certificate that signs and transmits for this emitente: its own A1, or, when it issues under a
+     * procuração, the office's certificate. The procuração itself lives at the Receita Federal and is
+     * checked by the ADN on every request, so nothing about it is stored here.
+     */
     public static function doEmitente(Emitente $emitente): self
     {
+        if ($emitente->emitePorProcuracao()) {
+            $gestao = app(GestaoDeCertificado::class);
+
+            if ($gestao->dadosDoSistema() === null) {
+                throw new NfseException('Este emitente emite por procuração, mas o certificado do escritório não está cadastrado. Envie-o em Configurações > Certificado do sistema.');
+            }
+
+            return $gestao->testarDoSistema();
+        }
+
         if (blank($emitente->certificado_path)) {
             throw new NfseException('O emitente não tem certificado digital A1 cadastrado. Envie o certificado em Administração > Configurações.');
         }

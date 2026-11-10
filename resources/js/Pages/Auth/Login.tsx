@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import './login.css';
+import { avisarCamposInvalidos } from '../../common/alerta';
 
 const registros = [
     { texto: 'Emita uma nota avulsa ou envie um lote por planilha CSV.', valor: '5.000', unidade: 'linhas por lote' },
@@ -25,7 +26,7 @@ export default function Login({ status, canResetPassword }: any) {
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('login'));
+        post(route('login'), { onError: avisarCamposInvalidos });
     };
 
     return (
