@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import Dropzone from "react-dropzone";
 import { Alert, Button, Card, Col, Container, Form, Row, Table } from "react-bootstrap";
 import { Head, Link, router, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
@@ -54,11 +55,25 @@ const LotesIndex = (props: any) => {
     invalidas: number;
     valor_total: number;
     problemas: { linha: number; tomador: string | null; valor: number | null; erros: string[] }[];
+    duplicadas: { linha: number; igual_a: number; tomador: string }[];
     truncado: boolean;
   };
   const [previa, setPrevia] = useState<Previa | null>(null);
   const [erroPrevia, setErroPrevia] = useState<string | null>(null);
   const [conferindo, setConferindo] = useState(false);
+  const [erroArquivo, setErroArquivo] = useState<string | null>(null);
+
+  const selecionarArquivo = (arquivos: File[]) => {
+    const arquivo = arquivos[0] ?? null;
+    setData("arquivo", arquivo);
+    setErroArquivo(null);
+  };
+
+  const formatarTamanho = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} bytes`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  };
 
   // Dry run: tells what the file would produce before anything is created.
   const conferir = async () => {
@@ -145,17 +160,59 @@ const LotesIndex = (props: any) => {
                       </Col>
                     )}
                     <Col md={5}>
-                      <Form.Label>Arquivo CSV</Form.Label>
-                      <Form.Control
-                        type="file"
-                        accept=".csv,.txt"
-                        onChange={(e) => setData("arquivo", (e.target as HTMLInputElement).files?.[0] ?? null)}
-                        isInvalid={!!errors.arquivo}
-                      />
-                      <Form.Control.Feedback type="invalid">{errors.arquivo}</Form.Control.Feedback>
-                      <Form.Text className="text-muted">
-                        Uma nota por linha. <a href={route("lotes.modelo")}>Baixar modelo</a>
-                      </Form.Text>
+                      <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+                        <Form.Label className="mb-0">Arquivo Excel ou CSV</Form.Label>
+                        <a href={route("lotes.modelo", { formato: "xlsx" })} className="btn btn-sm btn-outline-secondary">
+                          <i className="ri-file-excel-2-line me-1" aria-hidden="true"></i>
+                          Baixar modelo Excel
+                        </a>
+                      </div>
+                      <Dropzone
+                        accept={{
+                          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                          "text/csv": [".csv"],
+                          "text/plain": [".txt"],
+                        }}
+                        maxFiles={1}
+                        multiple={false}
+                        onDropAccepted={selecionarArquivo}
+                        onDropRejected={() => setErroArquivo("Selecione um arquivo Excel (.xlsx) ou CSV válido.")}
+                      >
+                        {({ getRootProps, getInputProps, isDragActive }) => (
+                          <div
+                            {...getRootProps()}
+                            className={`rounded-2 px-3 py-3 text-center ${isDragActive ? "bg-primary-subtle" : "bg-light"}`}
+                            style={{
+                              border: `2px dashed ${isDragActive ? "var(--vz-primary)" : "var(--vz-border-color)"}`,
+                              cursor: "pointer",
+                              minHeight: 92,
+                            }}
+                          >
+                            <input {...getInputProps()} />
+                            {data.arquivo ? (
+                              <div className="d-flex align-items-center justify-content-center gap-2 text-start">
+                                <i className="ri-file-check-line fs-24 text-success" aria-hidden="true"></i>
+                                <div>
+                                  <div className="fw-semibold text-body">{data.arquivo.name}</div>
+                                  <small className="text-muted">{formatarTamanho(data.arquivo.size)} · Clique ou arraste outro arquivo para substituir</small>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <i className="ri-upload-cloud-2-line fs-24 text-primary" aria-hidden="true"></i>
+                                <div className="fw-semibold text-body">
+                                  {isDragActive ? "Solte o arquivo aqui" : "Arraste o arquivo aqui ou clique para selecionar"}
+                                </div>
+                                <small className="text-muted">Excel (.xlsx) ou CSV · uma nota por linha</small>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </Dropzone>
+                      {(errors.arquivo || erroArquivo) && <div className="invalid-feedback d-block">{errors.arquivo || erroArquivo}</div>}
+                      <div className="mt-1">
+                        <a href={route("lotes.modelo")} className="text-muted small">Baixar modelo em CSV</a>
+                      </div>
                     </Col>
                     <Col md={2} className="d-flex align-items-end gap-2" style={{ minHeight: 62 }}>
                       <Button type="button" variant="outline-primary" onClick={conferir} disabled={conferindo || !data.emitente_id || !data.arquivo}>
@@ -185,6 +242,16 @@ const LotesIndex = (props: any) => {
                           </>
                         )}
                       </Alert>
+                      {previa.duplicadas.length > 0 && (
+                        <Alert variant="warning">
+                          <strong>{previa.duplicadas.length}</strong> {previa.duplicadas.length === 1 ? "linha repete" : "linhas repetem"} outra (mesmo tomador, serviço, valor e data) e emitiriam nota em duplicidade:{" "}
+                          {previa.duplicadas
+                            .slice(0, 10)
+                            .map((d) => `${d.linha} (igual à ${d.igual_a})`)
+                            .join(", ")}
+                          {previa.duplicadas.length > 10 && "…"}
+                        </Alert>
+                      )}
                       {previa.problemas.length > 0 && (
                         <Table size="sm" responsive>
                           <thead>

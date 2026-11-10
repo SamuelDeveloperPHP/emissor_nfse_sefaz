@@ -66,9 +66,9 @@ class LoteController extends Controller
         $request->validate([
             'ambiente' => ['nullable', Rule::in(['homologacao', 'producao'])],
             'emitente_id' => ['required', 'integer', 'exists:emitentes,id'],
-            'arquivo' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+            'arquivo' => ['required', 'file', 'extensions:csv,txt,xlsx', 'max:5120'],
         ], [
-            'arquivo.mimes' => 'Envie um arquivo CSV.',
+            'arquivo.extensions' => 'Envie um arquivo CSV ou Excel (.xlsx).',
             'arquivo.max' => 'O arquivo pode ter no máximo 5 MB.',
         ]);
 
@@ -93,9 +93,9 @@ class LoteController extends Controller
     {
         $request->validate([
             'emitente_id' => ['required', 'integer', 'exists:emitentes,id'],
-            'arquivo' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+            'arquivo' => ['required', 'file', 'extensions:csv,txt,xlsx', 'max:5120'],
         ], [
-            'arquivo.mimes' => 'Envie um arquivo CSV.',
+            'arquivo.extensions' => 'Envie um arquivo CSV ou Excel (.xlsx).',
             'arquivo.max' => 'O arquivo pode ter no máximo 5 MB.',
         ]);
 
@@ -107,6 +107,13 @@ class LoteController extends Controller
     public function rejeitadas(Request $request, Lote $lote, LoteImporter $importer)
     {
         abort_unless($request->user()->canAccessEmitente($lote->emitente), 403);
+
+        if ($request->query('formato') === 'xlsx') {
+            $caminho = tempnam(sys_get_temp_dir(), 'rej');
+            $importer->xlsxDasRejeitadas($lote, $caminho);
+
+            return response()->download($caminho, 'rejeitadas-lote-'.$lote->id.'.xlsx')->deleteFileAfterSend();
+        }
 
         return response()->streamDownload(
             fn () => print($importer->csvDasRejeitadas($lote)),
@@ -238,8 +245,15 @@ class LoteController extends Controller
         ];
     }
 
-    public function modelo()
+    public function modelo(Request $request)
     {
+        if ($request->query('formato') === 'xlsx') {
+            $caminho = tempnam(sys_get_temp_dir(), 'modelo');
+            LoteImporter::gerarModeloXlsx($caminho);
+
+            return response()->download($caminho, 'modelo-lote-nfse.xlsx')->deleteFileAfterSend();
+        }
+
         return response(LoteImporter::modeloCsv(), 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="modelo-lote-nfse.csv"',

@@ -53,9 +53,14 @@ const LoteShow = (props: any) => {
                   {lote.total} {lote.total === 1 ? "nota" : "notas"} · {lote.emitente} · {nomeDoAmbiente(lote.ambiente)} · enviado em {lote.created_at}
                 </span>
                 {lote.por_status.rejeitada > 0 && (
-                  <a className="btn btn-outline-primary btn-sm ms-auto" href={route("lotes.rejeitadas", lote.id)}>
-                    Baixar linhas rejeitadas (CSV)
-                  </a>
+                  <span className="ms-auto d-flex gap-2">
+                    <a className="btn btn-outline-primary btn-sm" href={route("lotes.rejeitadas", { lote: lote.id, formato: "xlsx" })}>
+                      Baixar rejeitadas (Excel)
+                    </a>
+                    <a className="btn btn-outline-primary btn-sm" href={route("lotes.rejeitadas", lote.id)}>
+                      CSV
+                    </a>
+                  </span>
                 )}
                 <Link href={route("lotes.index")} className={lote.por_status.rejeitada > 0 ? "" : "ms-auto"}>
                   Voltar aos lotes
