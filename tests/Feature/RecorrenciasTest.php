@@ -236,7 +236,7 @@ class RecorrenciasTest extends TestCase
         $this->assertSame(0, Lote::count());
     }
 
-    public function test_the_stored_environment_only_counts_while_the_administrador_allows_the_choice(): void
+    public function test_recurring_emissions_are_always_forced_to_homologacao(): void
     {
         $this->recorrencia(null, ['ambiente' => 'producao']);
         $this->recorrencia(null, ['ambiente' => 'producao']);
@@ -250,7 +250,7 @@ class RecorrenciasTest extends TestCase
         Setting::putBool(Setting::ESCOLHER_AMBIENTE, true);
 
         app(EmitirRecorrencias::class)->executar();
-        $this->assertSame(['producao', 'producao'], Lote::orderBy('id')->pluck('ambiente')->all());
+        $this->assertSame(['homologacao', 'homologacao'], Lote::orderBy('id')->pluck('ambiente')->all());
     }
 
     public function test_the_artisan_command_runs_it(): void

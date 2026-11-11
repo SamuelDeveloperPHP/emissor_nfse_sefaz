@@ -78,6 +78,7 @@ class CertificadoController extends Controller
 
     public function storeSistema(Request $request, GestaoDeCertificado $certificados)
     {
+        $this->autorizarAdministrador($request);
         $request->validate($this->regrasDoArquivo(), $this->mensagensDoArquivo());
 
         try {
@@ -103,6 +104,7 @@ class CertificadoController extends Controller
 
     public function destroySistema(Request $request, GestaoDeCertificado $certificados)
     {
+        $this->autorizarAdministrador($request);
         try {
             $certificados->removerDoSistema($request->user());
         } catch (Throwable $e) {
@@ -114,8 +116,9 @@ class CertificadoController extends Controller
         return back()->with('success', 'Certificado do sistema removido.');
     }
 
-    public function testarSistema(GestaoDeCertificado $certificados)
+    public function testarSistema(Request $request, GestaoDeCertificado $certificados)
     {
+        $this->autorizarAdministrador($request);
         try {
             $certificado = $certificados->testarDoSistema();
         } catch (NfseException $e) {
@@ -152,6 +155,11 @@ class CertificadoController extends Controller
     private function autorizar(Request $request, Emitente $emitente): void
     {
         abort_unless($request->user()->canAccessEmitente($emitente), 403);
+    }
+
+    private function autorizarAdministrador(Request $request): void
+    {
+        abort_unless($request->user()?->hasRole('Administrador'), 403);
     }
 
     private function falha(Throwable $e, string $mensagem, Emitente $emitente, Request $request)

@@ -31,6 +31,8 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        abort(403, 'O cadastro de usuários está desativado.');
+
         $data = $this->validated($request);
 
         $user = User::create([
@@ -48,6 +50,8 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        abort(403, 'A edição de usuários está desativada.');
+
         $data = $this->validated($request, $user);
 
         $user->update([
@@ -65,6 +69,8 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user)
     {
+        abort(403, 'A exclusão de usuários está desativada.');
+
         if ($user->id === $request->user()->id) {
             return back()->with('error', 'Você não pode excluir seu próprio usuário.');
         }

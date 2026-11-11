@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Emissor">
+  <rect width="64" height="64" rx="10" fill="#ffffff"/>
+  <path d="M12 9h40M12 55h40" fill="none" stroke="#0f2a33" stroke-width="3" stroke-linecap="square"/>
+  <text x="32" y="46" fill="#0f2a33" font-family="Georgia, 'Times New Roman', serif" font-size="43" font-weight="700" text-anchor="middle">E</text>
+</svg>

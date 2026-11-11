@@ -276,44 +276,9 @@ const Configuracoes = (props: any) => {
                   <h4 className="card-title mb-0">Ambiente de emissão</h4>
                 </Card.Header>
                 <Card.Body>
-                  <Alert variant={salvo ? "warning" : "info"} className="fs-15">
-                    {salvo ? (
-                      <>
-                        <strong>Escolha liberada.</strong> Quem emite escolhe Homologação ou Produção a cada lote e a cada nota avulsa.
-                      </>
-                    ) : (
-                      <>
-                        <strong>Tudo em Homologação.</strong> Nenhum usuário pode escolher: todas as notas e lotes saem em ambiente de teste, sem valor fiscal.
-                      </>
-                    )}
+                  <Alert variant="info" className="fs-15 mb-0">
+                    <strong>Somente Homologação.</strong> A emissão em Produção está bloqueada no servidor para todos os usuários e integrações. Todas as notas, lotes e recorrências são processados no ambiente de teste, sem valor fiscal.
                   </Alert>
-
-                  <Form onSubmit={salvarAmbiente}>
-                    <Form.Check
-                      type="switch"
-                      id="escolher_ambiente"
-                      className="fs-16"
-                      label="Liberar a escolha do ambiente na emissão"
-                      checked={ambiente.data.escolher_ambiente}
-                      onChange={(e) => ambiente.setData("escolher_ambiente", e.target.checked)}
-                    />
-
-                    <ul className="fs-15 mt-4 mb-0 ps-3" style={{ lineHeight: 1.7 }}>
-                      <li>
-                        <strong>Desligado:</strong> toda emissão usa Homologação.
-                      </li>
-                      <li>
-                        <strong>Ligado:</strong> aparece o campo Ambiente nas telas de lote e de nota avulsa, começando em Homologação. Quem emite pode trocar para Produção.
-                      </li>
-                      <li>Vale para todos os usuários do sistema. Só o Administrador vê esta tela.</li>
-                    </ul>
-
-                    <div className="mt-4">
-                      <Button type="submit" variant="primary" size="lg" disabled={ambiente.processing}>
-                        {ambiente.processing ? "Salvando..." : "Salvar"}
-                      </Button>
-                    </div>
-                  </Form>
                 </Card.Body>
               </Card>
             </Tab>

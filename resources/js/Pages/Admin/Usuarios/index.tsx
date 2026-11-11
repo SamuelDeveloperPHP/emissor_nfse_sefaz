@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Badge, Button, Card, Col, Container, Form, Modal, Row, Table } from "react-bootstrap";
+import { Alert, Badge, Button, Card, Col, Container, Form, Modal, Row, Table } from "react-bootstrap";
 import { Head, router, useForm } from "@inertiajs/react";
 import Layout from "../../../Layouts";
 import { useFlashAlert } from "../../../common/alerta";
@@ -115,11 +115,9 @@ const UsuariosIndex = (props: any) => {
           <Col lg={12}>
             <Card>
               <Card.Body>
-                <div className="d-flex justify-content-end mb-3">
-                  <Button variant="primary" onClick={openCreate}>
-                    <i className="ri-add-line align-bottom me-1"></i> Novo usuário
-                  </Button>
-                </div>
+                <Alert variant="info">
+                  O cadastro, a edição e a exclusão de usuários estão desativados. Esta página está disponível somente para consulta.
+                </Alert>
                 <Table hover responsive>
                   <thead>
                     <tr>
@@ -127,7 +125,6 @@ const UsuariosIndex = (props: any) => {
                       <th>E-mail</th>
                       <th>Papéis</th>
                       <th>Emitentes</th>
-                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -148,14 +145,6 @@ const UsuariosIndex = (props: any) => {
                           ) : (
                             <span className="text-muted">{user.emitente_ids.length} vinculado(s)</span>
                           )}
-                        </td>
-                        <td className="text-end">
-                          <Button size="sm" variant="light" className="me-1" onClick={() => openEdit(user)}>
-                            <i className="ri-pencil-line"></i>
-                          </Button>
-                          <Button size="sm" variant="light" onClick={() => confirmDelete(user)}>
-                            <i className="ri-delete-bin-line text-danger"></i>
-                          </Button>
                         </td>
                       </tr>
                     ))}
