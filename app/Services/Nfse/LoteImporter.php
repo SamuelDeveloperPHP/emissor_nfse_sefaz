@@ -182,6 +182,9 @@ class LoteImporter
      */
     private function criarLote(Emitente $emitente, ?User $user, array $linhas, string $nomeArquivo, ?string $ambiente = null, array $extrasDoPayload = []): Lote
     {
+        // Trava de segurança central: nenhuma entrada HTTP, tarefa agendada ou chamada interna pode emitir em produção.
+        $ambiente = 'homologacao';
+
         return DB::transaction(function () use ($emitente, $user, $linhas, $nomeArquivo, $ambiente, $extrasDoPayload) {
             $lote = Lote::create([
                 'emitente_id' => $emitente->id,

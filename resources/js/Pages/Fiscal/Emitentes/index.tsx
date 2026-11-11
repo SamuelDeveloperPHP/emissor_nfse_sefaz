@@ -99,7 +99,7 @@ const EmitentesIndex = (props: any) => {
       email: emitente.email ?? "",
       telefone: emitente.telefone ?? "",
       regime_tributario: emitente.regime_tributario ?? "",
-      ambiente: emitente.ambiente,
+      ambiente: "homologacao",
       driver: emitente.driver,
       modo_certificado: emitente.modo_certificado ?? "certificado",
       rps_serie: emitente.rps_serie ?? "",
@@ -365,7 +365,6 @@ const EmitentesIndex = (props: any) => {
                 <Form.Label>Ambiente</Form.Label>
                 <Form.Select value={data.ambiente} onChange={(e) => setData("ambiente", e.target.value)}>
                   <option value="homologacao">Homologação</option>
-                  <option value="producao">Produção</option>
                 </Form.Select>
               </Col>
               <Col md={4}>

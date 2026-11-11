@@ -55,13 +55,9 @@ class SettingController extends Controller
 
     public function update(Request $request)
     {
-        $dados = $request->validate([
-            'escolher_ambiente' => ['required', 'boolean'],
-        ]);
-
         return $this->executar(
-            fn () => Setting::putBool(Setting::ESCOLHER_AMBIENTE, (bool) $dados['escolher_ambiente']),
-            'Configurações salvas.',
+            fn () => Setting::putBool(Setting::ESCOLHER_AMBIENTE, false),
+            'O ambiente de Homologação permanece bloqueado.',
             'Não foi possível salvar as configurações. Tente novamente.'
         );
     }

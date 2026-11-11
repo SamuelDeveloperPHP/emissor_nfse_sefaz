@@ -25,6 +25,10 @@ class Setting extends Model
 
     public static function bool(string $key, bool $default = false): bool
     {
+        if ($key === self::ESCOLHER_AMBIENTE) {
+            return false;
+        }
+
         $value = static::query()->whereKey($key)->value('value');
 
         return $value === null ? $default : $value === '1';
@@ -51,6 +55,10 @@ class Setting extends Model
 
     public static function putBool(string $key, bool $value): void
     {
+        if ($key === self::ESCOLHER_AMBIENTE) {
+            $value = false;
+        }
+
         static::query()->updateOrCreate(['key' => $key], ['value' => $value ? '1' : '0']);
     }
 }

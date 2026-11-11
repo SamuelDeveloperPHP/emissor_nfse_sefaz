@@ -122,6 +122,7 @@ class EmitenteController extends Controller
             'bairro' => $texto('bairro', 100),
             'email' => mb_strtolower(trim((string) $request->input('email'))),
             'telefone' => substr(preg_replace('/\D/', '', (string) $request->input('telefone')) ?? '', 0, 11),
+            'ambiente' => 'homologacao',
         ]);
 
         return $request->validate([
