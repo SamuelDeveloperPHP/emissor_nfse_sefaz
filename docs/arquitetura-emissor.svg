@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 740" width="1200" height="740" role="img" aria-labelledby="t d">
+  <title id="t">Arquitetura do emissor de NFS-e em lote</title>
+  <desc id="d">Interface em React; aplicação Laravel com entrada, prévia, fila, montagem e assinatura da DPS, driver de transmissão e ADN nacional; dados e segurança na base.</desc>
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1424"/>
+      <stop offset="1" stop-color="#12284a"/>
+    </linearGradient>
+    <marker id="seta" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0 0 L9 4.5 L0 9 z" fill="#7fb4ff"/>
+    </marker>
+    <style>
+      text { font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; fill: #eaf2ff; }
+      .titulo { font-size: 32px; font-weight: 700; }
+      .sub { font-size: 15px; fill: #9db4d8; }
+      .faixa { fill: #0f1d36; stroke: #29406b; stroke-width: 1.5; }
+      .rot { font-size: 12px; font-weight: 700; letter-spacing: 1.6px; fill: #6fa3ff; }
+      .rot2 { font-size: 12.5px; fill: #9db4d8; }
+      .chip { fill: #16315c; stroke: #3a5c96; stroke-width: 1; }
+      .chip-t { font-size: 14px; text-anchor: middle; }
+      .passo { fill: #17335f; stroke: #4d86e0; stroke-width: 1.6; }
+      .gov { fill: #3a2c0a; stroke: #f2b84b; stroke-width: 1.6; }
+      .seg { fill: #0f3a3a; stroke: #2bb3c0; stroke-width: 1; }
+      .p-t { font-size: 15px; font-weight: 700; }
+      .p-l { font-size: 12.5px; fill: #c5d6f2; }
+      .apoio { fill: #112544; stroke: #3a5c96; stroke-width: 1; stroke-dasharray: 5 4; }
+      .ap-t { font-size: 13px; fill: #c5d6f2; }
+      .lig { stroke: #7fb4ff; stroke-width: 2; fill: none; }
+      .rod { font-size: 13px; fill: #8da6cc; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="740" fill="url(#fundo)"/>
+
+  <text x="40" y="58" class="titulo">Arquitetura do emissor de NFS-e em lote</text>
+  <text x="40" y="86" class="sub">Da planilha à nota autorizada, em camadas simples de entender e de trocar</text>
+
+  <!-- Interface -->
+  <rect x="30" y="112" width="1140" height="96" rx="14" class="faixa"/>
+  <text x="56" y="146" class="rot">INTERFACE</text>
+  <text x="56" y="168" class="rot2">React 19 · TypeScript · Inertia</text>
+  <g>
+    <rect x="270" y="136" width="130" height="38" rx="9" class="chip"/><text x="335" y="160" class="chip-t">Painel</text>
+    <rect x="412" y="136" width="130" height="38" rx="9" class="chip"/><text x="477" y="160" class="chip-t">Cadastros</text>
+    <rect x="554" y="136" width="130" height="38" rx="9" class="chip"/><text x="619" y="160" class="chip-t">Lotes</text>
+    <rect x="696" y="136" width="130" height="38" rx="9" class="chip"/><text x="761" y="160" class="chip-t">Notas</text>
+    <rect x="838" y="136" width="130" height="38" rx="9" class="chip"/><text x="903" y="160" class="chip-t">Fechamento</text>
+    <rect x="980" y="136" width="160" height="38" rx="9" class="chip"/><text x="1060" y="160" class="chip-t">Administração</text>
+  </g>
+
+  <!-- Aplicação -->
+  <rect x="30" y="230" width="1140" height="290" rx="14" class="faixa"/>
+  <text x="56" y="258" class="rot">APLICAÇÃO · LARAVEL 12</text>
+
+  <g>
+    <rect x="50" y="276" width="165" height="124" rx="12" class="passo"/>
+    <text x="64" y="302" class="p-t">1 · Entrada</text>
+    <text x="64" y="328" class="p-l">Planilha Excel/CSV</text>
+    <text x="64" y="348" class="p-l">Nota avulsa</text>
+    <text x="64" y="368" class="p-l">Recorrência mensal</text>
+
+    <rect x="237" y="276" width="165" height="124" rx="12" class="passo"/>
+    <text x="251" y="302" class="p-t">2 · Prévia</text>
+    <text x="251" y="328" class="p-l">Valida cada linha</text>
+    <text x="251" y="348" class="p-l">Aponta duplicadas</text>
+    <text x="251" y="368" class="p-l">Nada é emitido ainda</text>
+
+    <rect x="424" y="276" width="165" height="124" rx="12" class="passo"/>
+    <text x="438" y="302" class="p-t">3 · Fila</text>
+    <text x="438" y="328" class="p-l">Um job por nota</text>
+    <text x="438" y="348" class="p-l">Roda em segundo</text>
+    <text x="438" y="368" class="p-l">plano</text>
+
+    <rect x="611" y="276" width="165" height="124" rx="12" class="passo"/>
+    <text x="625" y="302" class="p-t">4 · DPS</text>
+    <text x="625" y="328" class="p-l">Monta o XML</text>
+    <text x="625" y="348" class="p-l">Valida no esquema</text>
+    <text x="625" y="368" class="p-l">Assina com o A1</text>
+
+    <rect x="798" y="276" width="165" height="124" rx="12" class="passo"/>
+    <text x="812" y="302" class="p-t">5 · Driver</text>
+    <text x="812" y="328" class="p-l">ADN nacional (mTLS)</text>
+    <text x="812" y="348" class="p-l">ou Simulador de teste</text>
+    <text x="812" y="368" class="p-l">Trocável por outro</text>
+
+    <rect x="985" y="276" width="165" height="124" rx="12" class="gov"/>
+    <text x="999" y="302" class="p-t">6 · Governo</text>
+    <text x="999" y="328" class="p-l">ADN / SEFIN Nacional</text>
+    <text x="999" y="348" class="p-l">Autoriza a NFS-e</text>
+    <text x="999" y="368" class="p-l">Devolve XML e chave</text>
+  </g>
+
+  <g class="lig" marker-end="url(#seta)">
+    <path d="M215 338 H233" marker-end="url(#seta)"/>
+    <path d="M402 338 H420" marker-end="url(#seta)"/>
+    <path d="M589 338 H607" marker-end="url(#seta)"/>
+    <path d="M776 338 H794" marker-end="url(#seta)"/>
+    <path d="M963 338 H981" marker-end="url(#seta)"/>
+  </g>
+
+  <!-- apoio -->
+  <g>
+    <rect x="50" y="440" width="540" height="60" rx="10" class="apoio"/>
+    <text x="66" y="465" class="ap-t">Agendador (cron a cada minuto): processa a fila,</text>
+    <text x="66" y="485" class="ap-t">reconsulta notas pendentes a cada 5 min e emite recorrências às 06:00</text>
+
+    <rect x="611" y="440" width="260" height="60" rx="10" class="apoio"/>
+    <text x="625" y="465" class="ap-t">Certificado A1 do emitente</text>
+    <text x="625" y="485" class="ap-t">ou do escritório (procuração)</text>
+
+    <rect x="890" y="440" width="260" height="60" rx="10" class="apoio"/>
+    <text x="904" y="465" class="ap-t">Resultado: XML, PDF (DANFSE),</text>
+    <text x="904" y="485" class="ap-t">e-mail ao tomador e fechamento</text>
+  </g>
+  <g class="lig">
+    <path d="M506 440 V404" marker-end="url(#seta)"/>
+    <path d="M693 440 V404" marker-end="url(#seta)"/>
+    <path d="M1067 404 V436" marker-end="url(#seta)"/>
+  </g>
+
+  <!-- Dados e segurança -->
+  <rect x="30" y="542" width="1140" height="124" rx="14" class="faixa"/>
+  <text x="56" y="572" class="rot">DADOS E SEGURANÇA</text>
+  <g>
+    <rect x="50" y="596" width="195" height="48" rx="10" class="seg"/><text x="147" y="625" class="chip-t">Banco de dados MySQL</text>
+    <rect x="257" y="596" width="215" height="48" rx="10" class="seg"/><text x="364" y="625" class="chip-t">Certificados criptografados</text>
+    <rect x="484" y="596" width="225" height="48" rx="10" class="seg"/><text x="596" y="625" class="chip-t">Papéis e permissões por módulo</text>
+    <rect x="721" y="596" width="200" height="48" rx="10" class="seg"/><text x="821" y="625" class="chip-t">Acesso por emitente</text>
+    <rect x="933" y="596" width="217" height="48" rx="10" class="seg"/><text x="1041" y="625" class="chip-t">Homologação por padrão</text>
+  </g>
+
+  <text x="40" y="700" class="rod">Roda em hospedagem compartilhada (cPanel), sem servidor dedicado.</text>
+  <text x="40" y="722" class="rod">Em validação no ambiente de homologação do governo.</text>
+</svg>

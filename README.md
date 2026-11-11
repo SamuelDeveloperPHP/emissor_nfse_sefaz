@@ -6,8 +6,8 @@ Sistema para escritórios de contabilidade emitirem notas fiscais de serviço (N
 
 ## O que o sistema faz
 
-- **Emitentes:** cadastro de CNPJs com regime tributário, município (código IBGE) e driver de transmissão por emitente.
-- **Certificado do sistema:** aba em Configurações para guardar o e-CNPJ A1 do escritório, com as mesmas proteções; por enquanto só é guardado e conferido, as notas usam o A1 de cada emitente.
+- **Emitentes:** cadastro de CNPJs com regime tributário, município (código IBGE) e driver de transmissão por emitente. Cada emitente escolhe **como assina**: com o **certificado próprio** (A1 enviado em Configurações) ou **por procuração** (usa o certificado do escritório). A escolha fica gravada no banco.
+- **Certificado do sistema:** aba em Configurações para guardar o e-CNPJ A1 do escritório, com as mesmas proteções. É usado **somente** pelos emitentes em modo procuração; os demais sempre assinam com o próprio A1. A procuração em si é eletrônica e vive na Receita (e-CAC); o sistema só guarda a escolha. Quem valida a procuração é o ADN, a cada pedido, e isso ainda precisa ser confirmado em produção restrita.
 - **Certificados digitais (A1):** o Administrador envia o .pfx e a senha de cada emitente em Administração > Configurações. O sistema abre o certificado na hora e só guarda se a senha estiver certa, se estiver na validade e se for do mesmo CNPJ (matriz e filial valem). O arquivo e a senha ficam criptografados com a `APP_KEY`; não voltam para a tela, para os logs nem para downloads; cada envio e remoção é registrado com usuário e data. **Faça backup da `APP_KEY`**: sem ela os certificados guardados não abrem e precisam ser enviados de novo.
 - **Notas fiscais:** lista com filtros (emitente, situação, período, tomador/número/chave), detalhe, download do XML da NFS-e e da DPS, DANFSE em PDF, consulta de notas pendentes (também automática a cada 5 minutos, com botão "Consultar agora") cancelamento por evento assinado e **substituição** (emite a nota corrigida com o grupo `subst` da DPS; a anterior só sai de circulação quando a nova é autorizada).
 - **IBS e CBS (reforma tributária):** grupo opcional da DPS, preenchido por serviço, no CSV (colunas `ibscbs_*`) ou na emissão avulsa; só vai na nota com os três códigos.
@@ -15,17 +15,18 @@ Sistema para escritórios de contabilidade emitirem notas fiscais de serviço (N
 - **Notas recorrentes:** mensalidades emitidas sozinhas todo mês, no dia escolhido (1 a 28), às 6h; pausa e retomada; nunca emite duas vezes o mesmo mês.
 - **E-mail ao tomador:** envia a nota autorizada com o XML (e o DANFSE em PDF, quando o ADN fornece).
 - **Fechamento do mês:** planilha Excel (notas, totais por tomador e por emitente, ISS retido) e ZIP com os XMLs do mês.
-- **Lotes por CSV:** botão *Conferir* mostra, linha a linha, o que será aceito antes de enviar; as linhas rejeitadas voltam em um CSV pronto para corrigir e reenviar.
+- **Lotes por Excel ou CSV:** há um modelo em Excel (com aba de instruções) e em CSV para baixar. O botão *Conferir* mostra, linha a linha, o que será aceito e avisa de possíveis duplicadas antes de enviar; as linhas rejeitadas voltam em Excel (ou CSV) no mesmo layout, prontas para corrigir e reenviar.
 - **NFS-e avulsa:** formulário para emitir uma nota.
-- **Lotes:** envio de planilha CSV (até 5.000 linhas), processamento em fila e acompanhamento do andamento.
+- **Lotes:** envio de planilha Excel (.xlsx) ou CSV (até 5 MB e 5.000 linhas), processamento em fila e acompanhamento do andamento.
 - **Ambiente de emissão:** por padrão toda emissão sai em **homologação**. O Administrador pode liberar, em Administração > Configurações, a escolha entre homologação e produção a cada lote ou nota; vale para o sistema inteiro.
 - **Painel:** indicadores de emitentes ativos/inativos e de notas por dia, semana, mês e ano (Chart.js com rótulos), além de certificados perto do vencimento.
+- **Treinamento público:** a página `/treinamento` abre sem login e ensina cada tela com passos interativos, uma cena 3D do caminho da nota e simuladores. O diagrama da arquitetura está em [`docs/arquitetura-emissor.svg`](docs/arquitetura-emissor.svg).
 - **Módulos e permissões:** o menu lateral é montado a partir de módulos cadastrados no banco; cada módulo gera as permissões `view`, `create`, `edit` e `delete` (mais ações extras).
 - **Papéis e usuários:** o administrador define os papéis e libera cada usuário para todos os emitentes ou só para alguns.
 
 ## Tecnologias
 
-Laravel 12, Inertia.js, React 19 com TypeScript, Vite, template Velzon (react-bootstrap), `spatie/laravel-permission`, Chart.js.
+Laravel 12, Inertia.js, React 19 com TypeScript, Vite, template Velzon (react-bootstrap), `spatie/laravel-permission`, Chart.js, `openspout` (leitura e escrita de Excel) e three.js (cena do treinamento).
 
 ## Como rodar em desenvolvimento
 
@@ -87,12 +88,12 @@ Isso gera `deploy/dist/emissor-nfse.zip` com o frontend compilado e as dependên
 php artisan usuarios:criar-admin seu@email.com.br --nome="Seu Nome"
 ```
 
-A fila precisa de um cron a cada minuto (`queue:work --stop-when-empty`); sem ele os lotes ficam em "Processando".
+É preciso um cron a cada minuto com `php artisan schedule:run`: ele processa a fila de lotes, consulta as notas pendentes (a cada 5 minutos) e emite as recorrências (às 6h). Sem ele os lotes ficam em "Processando". Se existir um cron antigo com `queue:work`, apague-o.
 
 ## Segurança
 
 - Não suba `.env`, certificados (`.pfx`) nem senhas para o repositório.
-- A rota pública `/register` do Breeze ainda está ativa; em produção, desative-a para que só o administrador crie usuários.
+- Não existe cadastro público: só o Administrador cria usuários (em produção, o primeiro com `usuarios:criar-admin`).
 - Se o pacote de produção foi gerado com uma versão antiga, apague o usuário de exemplo do template (`admin@themesbrand.com`).
 
 ## Licença
